@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+option java_package = "se.gustavkarlsson.snappier.protobuf";
+option java_outer_classname = "ProtoCommon";
+
+package common;
+
+message File {
+    required string path = 1;
+    required int64 size = 2;
+}

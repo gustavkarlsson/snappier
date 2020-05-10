@@ -1,0 +1,37 @@
+syntax = "proto2";
+
+option java_package = "se.gustavkarlsson.snappier.protobuf";
+option java_outer_classname = "ProtoSender";
+
+package sender;
+
+import "Common.proto";
+
+message Body {
+    oneof message {
+        Handshake handshake = 1;
+        IntendedFiles intendedFiles = 2;
+        FileStart fileStart = 3;
+        FileData fileData = 4;
+        FileEnd fileEnd = 5;
+    }
+}
+
+message Handshake {
+    required int32 protocolVersion = 1;
+}
+
+message IntendedFiles {
+    repeated common.File file = 1;
+}
+
+message FileStart {
+    required common.File file = 1;
+}
+
+message FileData {
+    required bytes data = 1;
+}
+
+message FileEnd {
+}

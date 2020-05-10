@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+option java_package = "se.gustavkarlsson.snappier.protobuf";
+option java_outer_classname = "ProtoReceiver";
+
+package receiver;
+
+import "Common.proto";
+
+message Body {
+    oneof message {
+        Handshake handshake = 1;
+        AcceptedFiles acceptedFiles = 2;
+    }
+}
+
+message Handshake {
+    required int32 protocolVersion = 1;
+}
+
+message AcceptedFiles {
+    repeated common.File file = 1;
+}
