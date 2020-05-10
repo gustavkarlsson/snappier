@@ -51,6 +51,7 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
                         )
                     }
                 }
+                .doOnError { logger.error(it) { "Event source failed" } }
         }
     }
 

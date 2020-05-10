@@ -51,6 +51,7 @@ fun createReceiverKnot(connection: ReceiverConnection): Knot<State, Change> = kn
                         ReceiverConnection.Event.FileCompleted -> Change.FileCompleted
                     }
                 }
+                .doOnError { logger.error(it) { "Event source failed" } }
         }
     }
 

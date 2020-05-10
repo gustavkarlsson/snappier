@@ -6,6 +6,7 @@ import common.SenderMessage
 import receiver.SenderMessageDeserializer
 import se.gustavkarlsson.snappier.protobuf.ProtoCommon
 import se.gustavkarlsson.snappier.protobuf.ProtoSender
+import java.lang.Exception
 
 object ProtobufSenderMessageSerializer : SenderMessageSerializer, SenderMessageDeserializer {
     override fun serialize(message: SenderMessage): ByteArray =
@@ -17,6 +18,7 @@ object ProtobufSenderMessageSerializer : SenderMessageSerializer, SenderMessageD
             is SenderMessage.FileEnd -> message.proto().toByteArray()
         }
 
+    // TODO Conversion to domain objects doesn't fail reliably. Needs validation?
     override fun deserialize(data: ByteArray): SenderMessage {
         val message = ProtoSender.Body.parseFrom(data)
         return when (message.messageCase!!) {

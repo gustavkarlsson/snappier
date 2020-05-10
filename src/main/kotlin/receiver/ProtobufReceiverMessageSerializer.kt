@@ -13,6 +13,7 @@ object ProtobufReceiverMessageSerializer : ReceiverMessageSerializer, ReceiverMe
             is ReceiverMessage.AcceptedFiles -> message.proto().toByteArray()
         }
 
+    // TODO Conversion to domain objects doesn't fail reliably. Needs validation?
     override fun deserialize(data: ByteArray): ReceiverMessage {
         val message = ProtoReceiver.Body.parseFrom(data)
         return when (message.messageCase!!) {
