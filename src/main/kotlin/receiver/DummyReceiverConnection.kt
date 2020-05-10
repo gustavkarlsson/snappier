@@ -5,18 +5,18 @@ import common.ReceiverMessage
 import common.SenderMessage
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
-import io.reactivex.rxjava3.subjects.Subject
+import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 
 class DummyReceiverConnection(
-    incomingObservable: Observable<SenderMessage>,
-    private val outgoingSubject: Subject<ReceiverMessage>
+    incoming: Observable<SenderMessage>,
+    private val outgoing: Observer<ReceiverMessage>
 ) : ReceiverConnection {
 
     override val incoming: Observable<ReceiverConnection.Event> =
-        incomingObservable
+        incoming
             .doOnNext { logger.info { "Incoming message: $it" } }
             .map { message ->
                 when (message) {
@@ -29,8 +29,8 @@ class DummyReceiverConnection(
             }
 
     override fun sendHandshake(): Completable =
-        Completable.fromAction { outgoingSubject.onNext(ReceiverMessage.Handshake(1)) }
+        Completable.fromAction { outgoing.onNext(ReceiverMessage.Handshake(1)) }
 
     override fun sendAcceptedFiles(files: Set<File>): Completable =
-        Completable.fromAction { outgoingSubject.onNext(ReceiverMessage.AcceptedFiles(files)) }
+        Completable.fromAction { outgoing.onNext(ReceiverMessage.AcceptedFiles(files)) }
 }

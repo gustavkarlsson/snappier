@@ -23,15 +23,21 @@ object ProtobufReceiverMessageSerializer : ReceiverMessageSerializer, ReceiverMe
     }
 }
 
-private fun ReceiverMessage.Handshake.proto(): ProtoReceiver.Handshake =
-    ProtoReceiver.Handshake.newBuilder()
-        .setProtocolVersion(protocolVersion)
-        .build()
+private fun ReceiverMessage.Handshake.proto(): ProtoReceiver.Body =
+    ProtoReceiver.Body.newBuilder()
+        .setHandshake(
+            ProtoReceiver.Handshake.newBuilder()
+                .setProtocolVersion(protocolVersion)
+                .build()
+        ).build()
 
-private fun ReceiverMessage.AcceptedFiles.proto(): ProtoReceiver.AcceptedFiles =
-    ProtoReceiver.AcceptedFiles.newBuilder()
-        .addAllFile(files.map(File::proto))
-        .build()
+private fun ReceiverMessage.AcceptedFiles.proto(): ProtoReceiver.Body =
+    ProtoReceiver.Body.newBuilder()
+        .setAcceptedFiles(
+            ProtoReceiver.AcceptedFiles.newBuilder()
+                .addAllFile(files.map(File::proto))
+                .build()
+        ).build()
 
 private fun File.proto(): ProtoCommon.File =
     ProtoCommon.File.newBuilder()

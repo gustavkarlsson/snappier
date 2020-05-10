@@ -1,8 +1,10 @@
 import common.File
 import common.ReceiverMessage
 import common.SenderMessage
+import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.subjects.PublishSubject
 import receiver.DummyReceiverConnection
+import receiver.ProtobufReceiverMessageSerializer
 import receiver.createReceiverKnot
 import sender.DummySenderConnection
 import sender.ProtobufSenderMessageSerializer
@@ -14,8 +16,20 @@ fun main() {
     val senderToReceiverMessages = PublishSubject.create<SenderMessage>()
     val receiverToSenderMessages = PublishSubject.create<ReceiverMessage>()
 
-    val senderConnection = DummySenderConnection(receiverToSenderMessages, senderToReceiverMessages)
-    val receiverConnection = DummyReceiverConnection(senderToReceiverMessages, receiverToSenderMessages)
+    val incomingSenderMessages = receiverToSenderMessages
+        .map { ProtobufReceiverMessageSerializer.serialize(it) }
+        .map { ProtobufReceiverMessageSerializer.deserialize(it) }
+
+    val outgoingSenderMessages: Observer<SenderMessage> = senderToReceiverMessages
+
+    val incomingReceiverMessages = senderToReceiverMessages
+        .map { ProtobufSenderMessageSerializer.serialize(it) }
+        .map { ProtobufSenderMessageSerializer.deserialize(it) }
+
+    val outgoingReceiverMessages: Observer<ReceiverMessage> = receiverToSenderMessages
+
+    val senderConnection = DummySenderConnection(incomingSenderMessages, outgoingSenderMessages)
+    val receiverConnection = DummyReceiverConnection(incomingReceiverMessages, outgoingReceiverMessages)
 
     val senderKnot = createSenderKnot(senderConnection)
     val receiverKnot = createReceiverKnot(receiverConnection)
@@ -38,13 +52,6 @@ fun main() {
             )
         )
     )
-
-    val data = ProtobufSenderMessageSerializer.serialize(SenderMessage.FileStart(File("some/file.txt", 522)))
-
-    val value = ProtobufSenderMessageSerializer.deserialize(data)
-
-    println(data)
-    println(value)
 
     Thread.sleep(1_000_000_000)
 }
