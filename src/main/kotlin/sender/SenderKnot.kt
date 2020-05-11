@@ -82,7 +82,10 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
                     else -> unexpected(change)
                 }
                 is State.SendingFile -> when (change) {
-                    is Change.FileDataSent -> state.copy(currentSent = state.currentSent + change.sent).only
+                    is Change.FileDataSent -> {
+                        val newCurrentSent = state.currentSent + change.sent
+                        state.copy(currentSent = newCurrentSent).only
+                    }
                     Change.FileCompleted -> {
                         val nextFile = state.remainingFiles.firstOrNull()
                         if (nextFile != null) {
@@ -100,20 +103,19 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
     actions {
         watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
-            concatMap {
-                connection.sendHandshake().toObservable<Change>()
-            }
+            concatMap { connection.sendHandshake().toObservable<Change>() }
+                .doOnError { logger.error(it) { "Action source failed" } }
         }
         perform<Action.SendIntendedFiles> {
-            concatMap { action ->
-                connection.sendIntendedFiles(action.files).toObservable<Change>()
-            }
+            concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
+                .doOnError { logger.error(it) { "Action source failed" } }
         }
         perform<Action.SendFile> {
             concatMap { action ->
                 connection.sendFile(action.file)
                     .map<Change> { sent -> Change.FileDataSent(sent) }
                     .concatWith(Observable.just(Change.FileCompleted))
+                    .doOnError { logger.error(it) { "Action source failed" } }
             }
         }
     }

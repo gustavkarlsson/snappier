@@ -80,7 +80,10 @@ fun createReceiverKnot(connection: ReceiverConnection): Knot<State, Change> = kn
                     else -> unexpected(change)
                 }
                 is State.ReceivingFile -> when (change) {
-                    is Change.FileDataReceived -> state.copy(currentReceived = state.currentReceived + change.received).only
+                    is Change.FileDataReceived -> {
+                        val newCurrentReceived = state.currentReceived + change.received
+                        state.copy(currentReceived = newCurrentReceived).only
+                    }
                     Change.FileCompleted -> if (state.remainingFiles.isEmpty()) {
                         State.Completed.only
                     } else {
@@ -98,14 +101,12 @@ fun createReceiverKnot(connection: ReceiverConnection): Knot<State, Change> = kn
             watchAll { logger.info { "Action: $it" } }
         }
         perform<Action.SendHandshake> {
-            concatMap {
-                connection.sendHandshake().toObservable<Change>()
-            }
+            concatMap { connection.sendHandshake().toObservable<Change>() }
+                .doOnError { logger.error(it) { "Action source failed" } }
         }
         perform<Action.SendAcceptedFiles> {
-            concatMap { action ->
-                connection.sendAcceptedFiles(action.files).toObservable<Change>()
-            }
+            concatMap { action -> connection.sendAcceptedFiles(action.files).toObservable<Change>() }
+                .doOnError { logger.error(it) { "Action source failed" } }
         }
     }
 }
