@@ -6,9 +6,9 @@ import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.message.File
-import se.gustavkarlsson.snappier.message.ReceiverMessage
-import se.gustavkarlsson.snappier.message.SenderMessage
+import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.ReceiverMessage
+import se.gustavkarlsson.snappier.common.message.SenderMessage
 
 private val logger = KotlinLogging.logger {}
 

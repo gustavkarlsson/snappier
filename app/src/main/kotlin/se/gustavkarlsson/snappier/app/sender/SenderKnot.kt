@@ -4,7 +4,7 @@ import de.halfbit.knot3.Knot
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.message.File
+import se.gustavkarlsson.snappier.common.message.File
 
 private val logger = KotlinLogging.logger {}
 

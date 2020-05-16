@@ -3,7 +3,7 @@ package se.gustavkarlsson.snappier.app.receiver
 import de.halfbit.knot3.Knot
 import de.halfbit.knot3.knot
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.message.File
+import se.gustavkarlsson.snappier.common.message.File
 
 private val logger = KotlinLogging.logger {}
 

@@ -4,15 +4,15 @@ import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.subjects.PublishSubject
 import se.gustavkarlsson.snappier.app.receiver.DummyReceiverConnection
 import se.gustavkarlsson.snappier.app.receiver.createReceiverKnot
-import se.gustavkarlsson.snappier.message.File
-import se.gustavkarlsson.snappier.message.ReceiverMessage
-import se.gustavkarlsson.snappier.message.SenderMessage
-import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufReceiverMessageSerializer
-import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufSenderMessageSerializer
+import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.ReceiverMessage
+import se.gustavkarlsson.snappier.common.message.SenderMessage
+import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufReceiverMessageSerializer
+import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufSenderMessageSerializer
 import se.gustavkarlsson.snappier.app.sender.DummySenderConnection
 import se.gustavkarlsson.snappier.app.sender.createSenderKnot
-import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufReceiverMessageDeserializer
-import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufSenderMessageDeserializer
+import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufReceiverMessageDeserializer
+import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufSenderMessageDeserializer
 import se.gustavkarlsson.snappier.app.receiver.Change as ReceiverChange
 import se.gustavkarlsson.snappier.app.sender.Change as SenderChange
 

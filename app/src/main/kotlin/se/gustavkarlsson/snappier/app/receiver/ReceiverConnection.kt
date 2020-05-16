@@ -2,7 +2,7 @@ package se.gustavkarlsson.snappier.app.receiver
 
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
-import se.gustavkarlsson.snappier.message.File
+import se.gustavkarlsson.snappier.common.message.File
 
 interface ReceiverConnection {
     val incoming: Observable<Event>

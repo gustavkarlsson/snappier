@@ -1,11 +1,10 @@
 include(
     "app",
-    "message",
-    "protobuf",
-    "serialization-sender",
-    "serialization-receiver",
-    "serialization-protobuf",
-    "serialization-protobuf-common",
-    "serialization-protobuf-sender",
-    "serialization-protobuf-receiver"
+    "common-message",
+    "common-protobuf",
+    "common-serialization-protobuf",
+    "receiver-serialization",
+    "receiver-serialization-protobuf",
+    "sender-serialization",
+    "sender-serialization-protobuf"
 )
