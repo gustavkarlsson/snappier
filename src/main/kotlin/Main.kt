@@ -12,6 +12,9 @@ import sender.createSenderKnot
 import receiver.Change as ReceiverChange
 import sender.Change as SenderChange
 
+const val PROTOCOL_VERSION = 1
+const val BUFFER_SIZE = 1024
+
 fun main() {
     val senderToReceiverMessages = PublishSubject.create<SenderMessage>()
     val receiverToSenderMessages = PublishSubject.create<ReceiverMessage>()

@@ -1,5 +1,6 @@
 package receiver
 
+import PROTOCOL_VERSION
 import common.File
 import common.ReceiverMessage
 import common.SenderMessage
@@ -12,7 +13,8 @@ private val logger = KotlinLogging.logger {}
 
 class DummyReceiverConnection(
     incoming: Observable<SenderMessage>,
-    private val outgoing: Observer<ReceiverMessage>
+    private val outgoing: Observer<ReceiverMessage>,
+    private val protocolVersion: Int = PROTOCOL_VERSION
 ) : ReceiverConnection {
 
     override val incoming: Observable<ReceiverConnection.Event> =
@@ -29,7 +31,7 @@ class DummyReceiverConnection(
             }
 
     override fun sendHandshake(): Completable =
-        Completable.fromAction { outgoing.onNext(ReceiverMessage.Handshake(1)) }
+        Completable.fromAction { outgoing.onNext(ReceiverMessage.Handshake(protocolVersion)) }
 
     override fun sendAcceptedFiles(files: Set<File>): Completable =
         Completable.fromAction { outgoing.onNext(ReceiverMessage.AcceptedFiles(files)) }

@@ -1,5 +1,7 @@
 package sender
 
+import PROTOCOL_VERSION
+import BUFFER_SIZE
 import common.File
 import common.ReceiverMessage
 import common.SenderMessage
@@ -12,7 +14,9 @@ private val logger = KotlinLogging.logger {}
 
 class DummySenderConnection(
     incoming: Observable<ReceiverMessage>,
-    private val outgoing: Observer<SenderMessage>
+    private val outgoing: Observer<SenderMessage>,
+    private val protocolVersion: Int = PROTOCOL_VERSION,
+    private val bufferSize: Int = BUFFER_SIZE
 ) : SenderConnection {
     override val incoming: Observable<SenderConnection.Event> =
         incoming
@@ -25,14 +29,14 @@ class DummySenderConnection(
             }
 
     override fun sendHandshake(): Completable =
-        Completable.fromAction { outgoing.onNext(SenderMessage.Handshake(1)) }
+        Completable.fromAction { outgoing.onNext(SenderMessage.Handshake(protocolVersion)) }
 
     override fun sendIntendedFiles(files: Set<File>): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.IntendedFiles(files)) }
 
     override fun sendFile(file: File): Observable<Long> =
         Observable.fromIterable(LongRange(1, file.size))
-            .buffer(32)
+            .buffer(bufferSize)
             .concatMap { sendBytesAndUpdateProgress(it) }
             .doOnSubscribe { outgoing.onNext(SenderMessage.FileStart(file)) }
             .doOnComplete { outgoing.onNext(SenderMessage.FileEnd) }
