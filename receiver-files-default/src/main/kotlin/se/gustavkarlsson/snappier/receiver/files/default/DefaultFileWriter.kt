@@ -1,12 +1,17 @@
 package se.gustavkarlsson.snappier.receiver.files.default
 
 import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Scheduler
+import io.reactivex.rxjava3.schedulers.Schedulers
 import se.gustavkarlsson.snappier.receiver.files.FileWriter
 import java.io.BufferedOutputStream
 import java.io.File
 
-class DefaultFileWriter(private val writeBufferSize: Int = DEFAULT_BUFFER_SIZE) : FileWriter {
-
+class DefaultFileWriter(
+    private val writeBufferSize: Int = DEFAULT_BUFFER_SIZE,
+    private val scheduler: Scheduler = Schedulers.io()
+) : FileWriter {
+    // TODO schedulers?
     private var currentStream: BufferedOutputStream? = null
 
     override fun create(path: String): Completable =
