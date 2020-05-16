@@ -1,22 +1,22 @@
 package se.gustavkarlsson.snappier.app.sender
 
-import se.gustavkarlsson.snappier.app.PROTOCOL_VERSION
-import se.gustavkarlsson.snappier.app.BUFFER_SIZE
 import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
+import se.gustavkarlsson.snappier.sender.files.FileReader
 
 private val logger = KotlinLogging.logger {}
 
 class DummySenderConnection(
     incoming: Observable<ReceiverMessage>,
     private val outgoing: Observer<SenderMessage>,
-    private val protocolVersion: Int = PROTOCOL_VERSION,
-    private val bufferSize: Int = BUFFER_SIZE
+    private val fileReader: FileReader,
+    private val protocolVersion: Int
 ) : SenderConnection {
     override val incoming: Observable<SenderConnection.Event> =
         incoming
@@ -34,17 +34,10 @@ class DummySenderConnection(
     override fun sendIntendedFiles(files: Set<File>): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.IntendedFiles(files)) }
 
-    override fun sendFile(file: File): Observable<Long> =
-        Observable.fromIterable(LongRange(1, file.size))
-            .buffer(bufferSize)
-            .concatMap { sendBytesAndUpdateProgress(it) }
+    override fun sendFile(file: File): Flowable<Long> =
+        fileReader.readFile(file)
+            .doOnNext { outgoing.onNext(SenderMessage.FileData(it)) }
+            .map { it.size.toLong() }
             .doOnSubscribe { outgoing.onNext(SenderMessage.FileStart(file)) }
             .doOnComplete { outgoing.onNext(SenderMessage.FileEnd) }
-
-    private fun sendBytesAndUpdateProgress(values: List<Long>): Observable<Long> =
-        Observable.fromCallable {
-            val bytes = values.map { it.toByte() }.toByteArray()
-            outgoing.onNext(SenderMessage.FileData(bytes))
-            bytes.size.toLong()
-        }
 }

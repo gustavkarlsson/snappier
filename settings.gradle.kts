@@ -5,6 +5,8 @@ include(
     "common-serialization-protobuf",
     "receiver-serialization",
     "receiver-serialization-protobuf",
+    "sender-files",
+    "sender-files-buffered",
     "sender-serialization",
     "sender-serialization-protobuf"
 )

@@ -32,6 +32,7 @@ private sealed class Action {
     data class SendAcceptedFiles(val files: Set<File>) : Action()
 }
 
+// TODO error handling in knot????
 fun createReceiverKnot(connection: ReceiverConnection): Knot<State, Change> = knot<State, Change, Action> {
 
     state {

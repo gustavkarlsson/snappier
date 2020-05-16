@@ -15,6 +15,7 @@ sealed class State {
     object AwaitingAcceptedFiles : State()
     data class SendingFile(val currentFile: File, val currentSent: Long, val remainingFiles: Set<File>) : State()
     object Completed : State()
+    object TransferFailed : State()
     // TODO Add abort and pause/resume
 }
 
@@ -25,6 +26,7 @@ sealed class Change {
     data class ReceivedAcceptedFiles(val files: Set<File>) : Change()
     data class FileDataSent(val sent: Long) : Change()
     object FileCompleted : Change()
+    object FileSendingFailed : Change()
 }
 
 private sealed class Action {
@@ -33,6 +35,7 @@ private sealed class Action {
     data class SendFile(val file: File) : Action()
 }
 
+// TODO error handling in knot????
 fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<State, Change, Action> {
 
     state {
@@ -93,9 +96,11 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
                                 Action.SendFile(nextFile)
                         } else State.Completed.only
                     }
+                    Change.FileSendingFailed -> State.TransferFailed.only // TODO show error?
                     else -> unexpected(change)
                 }
                 State.Completed -> state.only
+                State.TransferFailed -> state.only
             }
         }
     }
@@ -114,8 +119,10 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
             concatMap { action ->
                 connection.sendFile(action.file)
                     .map<Change> { sent -> Change.FileDataSent(sent) }
+                    .toObservable()
                     .concatWith(Observable.just(Change.FileCompleted))
                     .doOnError { logger.error(it) { "Action source failed" } }
+                    .onErrorReturn { Change.FileSendingFailed }
             }
         }
     }

@@ -9,9 +9,11 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(project(":common-message"))
+    implementation(project(":sender-files"))
+    implementation(project(":sender-files-buffered"))
     implementation(project(":sender-serialization"))
-    implementation(project(":receiver-serialization"))
     implementation(project(":sender-serialization-protobuf"))
+    implementation(project(":receiver-serialization"))
     implementation(project(":receiver-serialization-protobuf"))
     implementation("de.halfbit:knot3:3.1.1")
     implementation("io.reactivex.rxjava3:rxjava:3.0.3")

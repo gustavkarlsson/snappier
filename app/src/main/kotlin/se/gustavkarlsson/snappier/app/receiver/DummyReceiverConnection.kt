@@ -1,6 +1,5 @@
 package se.gustavkarlsson.snappier.app.receiver
 
-import se.gustavkarlsson.snappier.app.PROTOCOL_VERSION
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
@@ -14,7 +13,7 @@ private val logger = KotlinLogging.logger {}
 class DummyReceiverConnection(
     incoming: Observable<SenderMessage>,
     private val outgoing: Observer<ReceiverMessage>,
-    private val protocolVersion: Int = PROTOCOL_VERSION
+    private val protocolVersion: Int
 ) : ReceiverConnection {
 
     override val incoming: Observable<ReceiverConnection.Event> =
