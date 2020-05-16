@@ -11,6 +11,8 @@ import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufReceiverMessage
 import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufSenderMessageSerializer
 import se.gustavkarlsson.snappier.app.sender.DummySenderConnection
 import se.gustavkarlsson.snappier.app.sender.createSenderKnot
+import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufReceiverMessageDeserializer
+import se.gustavkarlsson.snappier.serialization.protobuf.ProtobufSenderMessageDeserializer
 import se.gustavkarlsson.snappier.app.receiver.Change as ReceiverChange
 import se.gustavkarlsson.snappier.app.sender.Change as SenderChange
 
@@ -23,13 +25,13 @@ fun main() {
 
     val incomingSenderMessages = receiverToSenderMessages
         .map { ProtobufReceiverMessageSerializer.serialize(it) }
-        .map { ProtobufReceiverMessageSerializer.deserialize(it) }
+        .map { ProtobufReceiverMessageDeserializer.deserialize(it) }
 
     val outgoingSenderMessages: Observer<SenderMessage> = senderToReceiverMessages
 
     val incomingReceiverMessages = senderToReceiverMessages
         .map { ProtobufSenderMessageSerializer.serialize(it) }
-        .map { ProtobufSenderMessageSerializer.deserialize(it) }
+        .map { ProtobufSenderMessageDeserializer.deserialize(it) }
 
     val outgoingReceiverMessages: Observer<ReceiverMessage> = receiverToSenderMessages
 
