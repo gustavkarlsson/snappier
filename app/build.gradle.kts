@@ -13,6 +13,8 @@ dependencies {
     implementation(project(":sender-files-buffered"))
     implementation(project(":sender-serialization"))
     implementation(project(":sender-serialization-protobuf"))
+    implementation(project(":receiver-files"))
+    implementation(project(":receiver-files-default"))
     implementation(project(":receiver-serialization"))
     implementation(project(":receiver-serialization-protobuf"))
     implementation("de.halfbit:knot3:3.1.1")

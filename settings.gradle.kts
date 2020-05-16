@@ -3,6 +3,8 @@ include(
     "common-message",
     "common-protobuf",
     "common-serialization-protobuf",
+    "receiver-files",
+    "receiver-files-default",
     "receiver-serialization",
     "receiver-serialization-protobuf",
     "sender-files",

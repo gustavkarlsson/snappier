@@ -9,6 +9,7 @@ import se.gustavkarlsson.snappier.app.sender.createSenderKnot
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
+import se.gustavkarlsson.snappier.receiver.files.default.DefaultFileWriter
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufReceiverMessageSerializer
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufSenderMessageDeserializer
 import se.gustavkarlsson.snappier.sender.files.buffered.BufferedFileReader
@@ -43,8 +44,13 @@ fun main() {
         BufferedFileReader(chunkBufferSize = BUFFER_SIZE),
         PROTOCOL_VERSION
     )
-    val receiverConnection =
-        DummyReceiverConnection(incomingReceiverMessages, outgoingReceiverMessages, PROTOCOL_VERSION)
+
+    val receiverConnection = DummyReceiverConnection(
+        incomingReceiverMessages,
+        outgoingReceiverMessages,
+        DefaultFileWriter(),
+        PROTOCOL_VERSION
+    )
 
     val senderKnot = createSenderKnot(senderConnection)
     val receiverKnot = createReceiverKnot(receiverConnection)

@@ -16,8 +16,8 @@ class BufferedFileReader(
     private val chunkBufferSize: Int = DEFAULT_BUFFER_SIZE,
     private val scheduler: Scheduler = Schedulers.io()
 ) : FileReader {
-    override fun readFile(file: File): Flowable<ByteArray> {
-        return Single
+    override fun readFile(file: File): Flowable<ByteArray> =
+        Single
             .fromCallable { FileInputStream(file.path).iterableBuffered(readBufferSize, chunkBufferSize) }
             .flatMapPublisher {
                 Flowable.using(
@@ -26,7 +26,6 @@ class BufferedFileReader(
                     InputStream::close
                 )
             }
-    }
 }
 
 private fun InputStream.iterableBuffered(
