@@ -1,25 +1,28 @@
-package se.gustavkarlsson.snappier.app.sender
+package se.gustavkarlsson.snappier.sender.statemachine.knot
 
-import de.halfbit.knot3.Knot
 import de.halfbit.knot3.knot
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.sender.connection.SenderConnection
+import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
+import se.gustavkarlsson.snappier.sender.statemachine.State
 
 private val logger = KotlinLogging.logger {}
 
-sealed class State {
-    object Initial : State()
-    object AwaitingHandshake : State()
-    object AwaitingIntendedFiles : State()
-    object AwaitingAcceptedFiles : State()
-    data class SendingFile(val currentFile: File, val currentSent: Long, val remainingFiles: Set<File>) : State()
-    object Completed : State()
-    object TransferFailed : State()
-    // TODO Add abort and pause/resume
+class KnotSenderStateMachine(connection: SenderConnection) : SenderStateMachine {
+
+    private val knot = createReceiverKnot(connection)
+
+    override val state: Observable<State> get() = knot.state
+
+    override fun sendHandshake() = knot.change.accept(Change.SendHandshake)
+
+    override fun sendIntendedFiles(files: Set<File>) = knot.change.accept(Change.SendIntendedFiles(files))
 }
 
-sealed class Change {
+private sealed class Change {
     object SendHandshake : Change()
     object ReceivedHandshake : Change()
     data class SendIntendedFiles(val files: Set<File>) : Change()
@@ -36,7 +39,7 @@ private sealed class Action {
 }
 
 // TODO error handling in knot????
-fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<State, Change, Action> {
+private fun createReceiverKnot(connection: SenderConnection) = knot<State, Change, Action> {
 
     state {
         watchAll { logger.info { "State: $it" } }
@@ -49,9 +52,7 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
                 .map { event ->
                     when (event) {
                         is SenderConnection.Event.Handshake -> Change.ReceivedHandshake
-                        is SenderConnection.Event.AcceptedFiles -> Change.ReceivedAcceptedFiles(
-                            event.files
-                        )
+                        is SenderConnection.Event.AcceptedFiles -> Change.ReceivedAcceptedFiles(event.files)
                     }
                 }
                 .doOnError { logger.error(it) { "Event source failed" } }
@@ -115,14 +116,16 @@ fun createSenderKnot(connection: SenderConnection): Knot<State, Change> = knot<S
             concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
                 .doOnError { logger.error(it) { "Action source failed" } }
         }
+        // TODO read file before sending
         perform<Action.SendFile> {
             concatMap { action ->
-                connection.sendFile(action.file)
-                    .map<Change> { sent -> Change.FileDataSent(sent) }
-                    .toObservable()
-                    .concatWith(Observable.just(Change.FileCompleted))
-                    .doOnError { logger.error(it) { "Action source failed" } }
-                    .onErrorReturn { Change.FileSendingFailed }
+                Completable.concat(
+                    listOf(
+                        connection.sendFileStart(action.file),
+                        connection.sendFileData(byteArrayOf()),
+                        connection.sendFileEnd()
+                    )
+                ).toObservable<Change>()
             }
         }
     }

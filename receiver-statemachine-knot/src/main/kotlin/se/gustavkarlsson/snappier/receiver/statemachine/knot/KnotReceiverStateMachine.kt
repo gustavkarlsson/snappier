@@ -1,24 +1,25 @@
-package se.gustavkarlsson.snappier.app.receiver
+package se.gustavkarlsson.snappier.receiver.statemachine.knot
 
-import de.halfbit.knot3.Knot
 import de.halfbit.knot3.knot
+import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
+import se.gustavkarlsson.snappier.receiver.statemachine.ReceiverStateMachine
+import se.gustavkarlsson.snappier.receiver.statemachine.State
 
 private val logger = KotlinLogging.logger {}
 
-sealed class State {
-    object AwaitingHandshake : State()
-    object AwaitingIntendedFiles : State()
-    data class AwaitingAcceptedFiles(val intendedFiles: Set<File>) : State()
-    data class AwaitingFile(val remainingFiles: Set<File>) : State()
-    data class ReceivingFile(val currentFile: File, val currentReceived: Long, val remainingFiles: Set<File>) : State()
+class KnotReceiverStateMachine(connection: ReceiverConnection) : ReceiverStateMachine {
 
-    object Completed : State()
-    // TODO Add abort and pause/resume
+    private val knot = createReceiverKnot(connection)
+
+    override val state: Observable<State> get() = knot.state
+
+    override fun setAcceptedFiles(files: Set<File>) = knot.change.accept(Change.SendAcceptedFiles(files))
 }
 
-sealed class Change {
+private sealed class Change {
     object ReceivedHandshake : Change()
     data class ReceivedIntendedFiles(val files: Set<File>) : Change()
     data class SendAcceptedFiles(val files: Set<File>) : Change()
@@ -33,13 +34,14 @@ private sealed class Action {
 }
 
 // TODO error handling in knot????
-fun createReceiverKnot(connection: ReceiverConnection): Knot<State, Change> = knot<State, Change, Action> {
+private fun createReceiverKnot(connection: ReceiverConnection) = knot<State, Change, Action> {
 
     state {
         watchAll { logger.info { "State: $it" } }
         initial = State.AwaitingHandshake
     }
 
+    // TODO write file before mapping to change
     events {
         source {
             connection.incoming

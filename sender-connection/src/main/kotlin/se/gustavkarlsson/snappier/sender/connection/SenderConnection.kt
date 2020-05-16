@@ -1,7 +1,6 @@
-package se.gustavkarlsson.snappier.app.sender
+package se.gustavkarlsson.snappier.sender.connection
 
 import io.reactivex.rxjava3.core.Completable
-import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import se.gustavkarlsson.snappier.common.message.File
 
@@ -17,5 +16,9 @@ interface SenderConnection {
 
     fun sendIntendedFiles(files: Set<File>): Completable
 
-    fun sendFile(file: File): Flowable<Long>
+    fun sendFileStart(file: File): Completable
+
+    fun sendFileData(data: ByteArray): Completable
+
+    fun sendFileEnd(): Completable
 }

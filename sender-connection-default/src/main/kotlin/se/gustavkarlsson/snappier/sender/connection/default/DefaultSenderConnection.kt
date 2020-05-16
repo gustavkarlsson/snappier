@@ -1,21 +1,19 @@
-package se.gustavkarlsson.snappier.app.sender
+package se.gustavkarlsson.snappier.sender.connection.default
 
 import io.reactivex.rxjava3.core.Completable
-import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
-import se.gustavkarlsson.snappier.sender.files.FileReader
+import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 
 private val logger = KotlinLogging.logger {}
 
-class DummySenderConnection(
+class DefaultSenderConnection(
     incoming: Observable<ReceiverMessage>,
     private val outgoing: Observer<SenderMessage>,
-    private val fileReader: FileReader,
     private val protocolVersion: Int
 ) : SenderConnection {
     override val incoming: Observable<SenderConnection.Event> =
@@ -34,10 +32,12 @@ class DummySenderConnection(
     override fun sendIntendedFiles(files: Set<File>): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.IntendedFiles(files)) }
 
-    override fun sendFile(file: File): Flowable<Long> =
-        fileReader.readFile(file)
-            .doOnNext { outgoing.onNext(SenderMessage.FileData(it)) }
-            .map { it.size.toLong() }
-            .doOnSubscribe { outgoing.onNext(SenderMessage.FileStart(file)) }
-            .doOnComplete { outgoing.onNext(SenderMessage.FileEnd) }
+    override fun sendFileStart(file: File): Completable =
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(file)) }
+
+    override fun sendFileData(data: ByteArray): Completable =
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileData(data)) }
+
+    override fun sendFileEnd(): Completable =
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileEnd) }
 }
