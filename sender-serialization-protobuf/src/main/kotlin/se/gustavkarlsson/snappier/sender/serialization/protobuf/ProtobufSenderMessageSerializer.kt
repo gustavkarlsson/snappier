@@ -6,8 +6,7 @@ import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.protobuf.ProtoSender
 import se.gustavkarlsson.snappier.sender.serialization.SenderMessageSerializer
 
-object ProtobufSenderMessageSerializer :
-    SenderMessageSerializer {
+object ProtobufSenderMessageSerializer : SenderMessageSerializer {
     override fun serialize(message: SenderMessage): ByteArray = message.toProto().toByteArray()
 }
 

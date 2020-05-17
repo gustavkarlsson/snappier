@@ -6,8 +6,7 @@ import se.gustavkarlsson.snappier.protobuf.ProtoCommon
 import se.gustavkarlsson.snappier.protobuf.ProtoReceiver
 import se.gustavkarlsson.snappier.sender.serialization.ReceiverMessageDeserializer
 
-object ProtobufReceiverMessageDeserializer :
-    ReceiverMessageDeserializer {
+object ProtobufReceiverMessageDeserializer : ReceiverMessageDeserializer {
     override fun deserialize(data: ByteArray): ReceiverMessage = ProtoReceiver.Body.parseFrom(data).toMessage()
 }
 

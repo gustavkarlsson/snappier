@@ -7,7 +7,6 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":common-message"))
-    implementation(kotlin("stdlib-jdk8"))
-    implementation("io.reactivex.rxjava3:rxjava:3.0.3")
+    api(kotlin("stdlib-jdk8"))
+    api("io.reactivex.rxjava3:rxjava:3.0.3")
 }

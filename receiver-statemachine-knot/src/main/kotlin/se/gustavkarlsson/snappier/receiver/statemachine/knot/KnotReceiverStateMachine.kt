@@ -5,12 +5,16 @@ import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
+import se.gustavkarlsson.snappier.receiver.files.FileWriter
 import se.gustavkarlsson.snappier.receiver.statemachine.ReceiverStateMachine
 import se.gustavkarlsson.snappier.receiver.statemachine.State
 
 private val logger = KotlinLogging.logger {}
 
-class KnotReceiverStateMachine(connection: ReceiverConnection) : ReceiverStateMachine {
+class KnotReceiverStateMachine(
+    connection: ReceiverConnection,
+    fileWriter: FileWriter
+) : ReceiverStateMachine {
 
     private val knot = createReceiverKnot(connection)
 

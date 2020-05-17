@@ -6,17 +6,20 @@ import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.receiver.connection.default.DefaultReceiverConnection
+import se.gustavkarlsson.snappier.receiver.files.default.DefaultFileWriter
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufReceiverMessageSerializer
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufSenderMessageDeserializer
 import se.gustavkarlsson.snappier.receiver.statemachine.knot.KnotReceiverStateMachine
 import se.gustavkarlsson.snappier.sender.connection.default.DefaultSenderConnection
+import se.gustavkarlsson.snappier.sender.files.buffered.BufferedFileReader
 import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufReceiverMessageDeserializer
 import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufSenderMessageSerializer
 import se.gustavkarlsson.snappier.sender.statemachine.knot.KnotSenderStateMachine
 import java.io.File as JavaFile
 
-const val PROTOCOL_VERSION = 1
-const val BUFFER_SIZE = 20480
+private const val PROTOCOL_VERSION = 1
+private const val FILE_BUFFER_SIZE = 8192
+private const val TRANSFER_BUFFER_SIZE = 32768
 
 fun main() {
     val senderToReceiverMessages = PublishSubject.create<SenderMessage>()
@@ -47,8 +50,11 @@ fun main() {
         PROTOCOL_VERSION
     )
 
-    val senderStateMachine = KnotSenderStateMachine(senderConnection)
-    val receiverStateMachine = KnotReceiverStateMachine(receiverConnection)
+    val fileReader = BufferedFileReader(FILE_BUFFER_SIZE, TRANSFER_BUFFER_SIZE)
+    val fileWriter = DefaultFileWriter(FILE_BUFFER_SIZE)
+
+    val senderStateMachine = KnotSenderStateMachine(senderConnection, fileReader)
+    val receiverStateMachine = KnotReceiverStateMachine(receiverConnection, fileWriter)
 
     senderStateMachine.sendHandshake()
     senderStateMachine.sendIntendedFiles(

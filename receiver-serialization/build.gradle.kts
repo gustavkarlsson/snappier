@@ -7,6 +7,6 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":common-message"))
-    implementation(kotlin("stdlib-jdk8"))
+    api(project(":common-message"))
+    api(kotlin("stdlib-jdk8"))
 }

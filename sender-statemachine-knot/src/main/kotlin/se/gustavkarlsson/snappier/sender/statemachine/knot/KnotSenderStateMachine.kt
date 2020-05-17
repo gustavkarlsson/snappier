@@ -1,19 +1,22 @@
 package se.gustavkarlsson.snappier.sender.statemachine.knot
 
 import de.halfbit.knot3.knot
-import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
+import se.gustavkarlsson.snappier.sender.files.FileReader
 import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
 import se.gustavkarlsson.snappier.sender.statemachine.State
 
 private val logger = KotlinLogging.logger {}
 
-class KnotSenderStateMachine(connection: SenderConnection) : SenderStateMachine {
+class KnotSenderStateMachine(
+    connection: SenderConnection,
+    fileReader: FileReader
+) : SenderStateMachine {
 
-    private val knot = createReceiverKnot(connection)
+    private val knot = createSenderKnot(connection)
 
     override val state: Observable<State> get() = knot.state
 
@@ -39,7 +42,7 @@ private sealed class Action {
 }
 
 // TODO error handling in knot????
-private fun createReceiverKnot(connection: SenderConnection) = knot<State, Change, Action> {
+private fun createSenderKnot(connection: SenderConnection) = knot<State, Change, Action> {
 
     state {
         watchAll { logger.info { "State: $it" } }
@@ -119,13 +122,13 @@ private fun createReceiverKnot(connection: SenderConnection) = knot<State, Chang
         // TODO read file before sending
         perform<Action.SendFile> {
             concatMap { action ->
-                Completable.concat(
+                Observable.concat(
                     listOf(
-                        connection.sendFileStart(action.file),
-                        connection.sendFileData(byteArrayOf()),
-                        connection.sendFileEnd()
+                        connection.sendFileStart(action.file).toObservable(),
+                        connection.sendFileData(byteArrayOf()).andThen(Observable.just(Change.FileDataSent(100))),
+                        connection.sendFileEnd().andThen(Observable.just(Change.FileCompleted))
                     )
-                ).toObservable<Change>()
+                )
             }
         }
     }

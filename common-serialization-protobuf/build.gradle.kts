@@ -7,8 +7,8 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":common-message"))
-    implementation(project(":common-protobuf"))
-    implementation(kotlin("stdlib-jdk8"))
+    api(project(":common-message"))
+    api(project(":common-protobuf"))
+    api(kotlin("stdlib-jdk8"))
     implementation("com.google.protobuf:protobuf-java:3.6.1")
 }

@@ -7,8 +7,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":common-message"))
-    implementation(project(":receiver-files"))
-    implementation(kotlin("stdlib-jdk8"))
-    implementation("io.reactivex.rxjava3:rxjava:3.0.3")
+    api(project(":receiver-files"))
+    api(kotlin("stdlib-jdk8"))
+    api("io.reactivex.rxjava3:rxjava:3.0.3")
 }
