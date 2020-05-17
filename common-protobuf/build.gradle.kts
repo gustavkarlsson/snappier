@@ -14,7 +14,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation("com.google.protobuf:protobuf-java:3.6.1")
+    implementation("com.google.protobuf:protobuf-java:3.12.0")
 }
 
 protobuf {
