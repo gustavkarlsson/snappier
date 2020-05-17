@@ -25,7 +25,7 @@ private fun ProtoSender.Handshake.toMessage(): SenderMessage.Handshake =
     SenderMessage.Handshake(protocolVersion)
 
 private fun ProtoSender.IntendedFiles.toMessage(): SenderMessage.IntendedFiles =
-    SenderMessage.IntendedFiles(fileList.map(ProtoCommon.File::toMessage).toSet())
+    SenderMessage.IntendedFiles(fileList.map(ProtoCommon.File::toMessage))
 
 private fun ProtoSender.FileStart.toMessage(): SenderMessage.FileStart =
     SenderMessage.FileStart(file.toMessage())

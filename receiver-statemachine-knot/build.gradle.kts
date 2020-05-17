@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    api(project(":common-message"))
+    api(project(":common-domain"))
     api(project(":receiver-statemachine"))
     api(project(":receiver-connection"))
     api(project(":receiver-files"))

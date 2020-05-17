@@ -4,7 +4,6 @@ import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
@@ -25,7 +24,7 @@ class DefaultReceiverConnection(
                     is SenderMessage.Handshake -> ReceiverConnection.Event.Handshake(message.protocolVersion)
                     is SenderMessage.IntendedFiles -> ReceiverConnection.Event.IntendedFiles(message.files)
                     is SenderMessage.FileStart -> ReceiverConnection.Event.NewFile(message.file)
-                    is SenderMessage.FileData -> ReceiverConnection.Event.FileDataReceived(message.data.size.toLong())
+                    is SenderMessage.FileData -> ReceiverConnection.Event.FileDataReceived(message.data)
                     SenderMessage.FileEnd -> ReceiverConnection.Event.FileCompleted
                 }
             }
@@ -33,6 +32,6 @@ class DefaultReceiverConnection(
     override fun sendHandshake(): Completable =
         Completable.fromAction { outgoing.onNext(ReceiverMessage.Handshake(protocolVersion)) }
 
-    override fun sendAcceptedFiles(files: Set<File>): Completable =
-        Completable.fromAction { outgoing.onNext(ReceiverMessage.AcceptedFiles(files)) }
+    override fun sendAcceptedPaths(transferPaths: Collection<String>): Completable =
+        Completable.fromAction { outgoing.onNext(ReceiverMessage.AcceptedPaths(transferPaths)) }
 }

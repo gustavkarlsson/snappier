@@ -2,6 +2,7 @@ package se.gustavkarlsson.snappier.app
 
 import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.subjects.PublishSubject
+import se.gustavkarlsson.snappier.common.domain.TransferFile
 import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
@@ -62,20 +63,20 @@ fun main() {
             JavaFile("settings.gradle.kts"),
             JavaFile("build.gradle.kts"),
             JavaFile(".editorconfig")
-        )
-            .map { it.toFile() }
-            .toSet()
+        ).map(JavaFile::toTransferFile)
     )
-    receiverStateMachine.setAcceptedFiles(
+    receiverStateMachine.setAcceptedPaths(
+        "received",
         listOf(
-            JavaFile("settings.gradle.kts"),
-            JavaFile("build.gradle.kts")
+            "transfer/settings.gradle.kts",
+            "transfer/build.gradle.kts"
         )
-            .map { it.toFile() }
-            .toSet()
     )
 
     Thread.sleep(1_000_000_000)
 }
+
+private fun JavaFile.toTransferFile(): TransferFile =
+    TransferFile(path, "transfer/$name", length())
 
 private fun JavaFile.toFile(): File = File(path, length())

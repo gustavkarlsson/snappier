@@ -8,6 +8,7 @@ import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
+import se.gustavkarlsson.snappier.common.domain.TransferFile
 
 private val logger = KotlinLogging.logger {}
 
@@ -22,18 +23,21 @@ class DefaultSenderConnection(
             .map { message ->
                 when (message) {
                     is ReceiverMessage.Handshake -> SenderConnection.Event.Handshake(message.protocolVersion)
-                    is ReceiverMessage.AcceptedFiles -> SenderConnection.Event.AcceptedFiles(message.files)
+                    is ReceiverMessage.AcceptedPaths -> SenderConnection.Event.AcceptedPaths(message.transferPaths)
                 }
             }
 
     override fun sendHandshake(): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.Handshake(protocolVersion)) }
 
-    override fun sendIntendedFiles(files: Set<File>): Completable =
-        Completable.fromAction { outgoing.onNext(SenderMessage.IntendedFiles(files)) }
+    override fun sendIntendedFiles(files: Collection<TransferFile>): Completable =
+        Completable.fromAction {
+            val fileMessages = files.map(TransferFile::toMessageFile)
+            outgoing.onNext(SenderMessage.IntendedFiles(fileMessages))
+        }
 
-    override fun sendFileStart(file: File): Completable =
-        Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(file)) }
+    override fun sendFileStart(file: TransferFile): Completable =
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(file.toMessageFile())) }
 
     override fun sendFileData(data: ByteArray): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.FileData(data)) }
@@ -41,3 +45,5 @@ class DefaultSenderConnection(
     override fun sendFileEnd(): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.FileEnd) }
 }
+
+private fun TransferFile.toMessageFile(): File = File(transferPath, size)

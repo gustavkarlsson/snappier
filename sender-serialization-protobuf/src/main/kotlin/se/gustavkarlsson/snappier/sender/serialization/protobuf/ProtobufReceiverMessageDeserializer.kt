@@ -1,8 +1,6 @@
 package se.gustavkarlsson.snappier.sender.serialization.protobuf
 
-import se.gustavkarlsson.snappier.common.serialization.protobuf.toMessage
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
-import se.gustavkarlsson.snappier.protobuf.ProtoCommon
 import se.gustavkarlsson.snappier.protobuf.ProtoReceiver
 import se.gustavkarlsson.snappier.sender.serialization.ReceiverMessageDeserializer
 
@@ -14,12 +12,12 @@ object ProtobufReceiverMessageDeserializer : ReceiverMessageDeserializer {
 private fun ProtoReceiver.Body.toMessage(): ReceiverMessage =
     when (messageCase!!) {
         ProtoReceiver.Body.MessageCase.HANDSHAKE -> handshake.toMessage()
-        ProtoReceiver.Body.MessageCase.ACCEPTEDFILES -> acceptedFiles.toMessage()
+        ProtoReceiver.Body.MessageCase.ACCEPTEDPATHS -> acceptedPaths.toMessage()
         ProtoReceiver.Body.MessageCase.MESSAGE_NOT_SET -> error("Message not set")
     }
 
 private fun ProtoReceiver.Handshake.toMessage(): ReceiverMessage.Handshake =
     ReceiverMessage.Handshake(protocolVersion)
 
-private fun ProtoReceiver.AcceptedFiles.toMessage(): ReceiverMessage.AcceptedFiles =
-    ReceiverMessage.AcceptedFiles(fileList.map(ProtoCommon.File::toMessage).toSet())
+private fun ProtoReceiver.AcceptedPaths.toMessage(): ReceiverMessage.AcceptedPaths =
+    ReceiverMessage.AcceptedPaths(pathList)

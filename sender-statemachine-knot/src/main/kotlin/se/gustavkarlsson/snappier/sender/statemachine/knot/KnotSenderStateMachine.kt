@@ -3,8 +3,8 @@ package se.gustavkarlsson.snappier.sender.statemachine.knot
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.common.message.File
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
+import se.gustavkarlsson.snappier.common.domain.TransferFile
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
 import se.gustavkarlsson.snappier.sender.statemachine.State
@@ -22,14 +22,14 @@ class KnotSenderStateMachine(
 
     override fun sendHandshake() = knot.change.accept(Change.SendHandshake)
 
-    override fun sendIntendedFiles(files: Set<File>) = knot.change.accept(Change.SendIntendedFiles(files))
+    override fun sendIntendedFiles(files: Collection<TransferFile>) = knot.change.accept(Change.SendIntendedFiles(files))
 }
 
 private sealed class Change {
     object SendHandshake : Change()
     object ReceivedHandshake : Change()
-    data class SendIntendedFiles(val files: Set<File>) : Change()
-    data class ReceivedAcceptedFiles(val files: Set<File>) : Change()
+    data class SendIntendedFiles(val files: Collection<TransferFile>) : Change()
+    data class ReceivedAcceptedFiles(val transferPaths: Collection<String>) : Change()
     data class FileDataSent(val sent: Long) : Change()
     object FileCompleted : Change()
     object FileSendingFailed : Change()
@@ -37,8 +37,8 @@ private sealed class Change {
 
 private sealed class Action {
     object SendHandshake : Action()
-    data class SendIntendedFiles(val files: Set<File>) : Action()
-    data class SendFile(val file: File) : Action()
+    data class SendIntendedFiles(val files: Collection<TransferFile>) : Action()
+    data class SendFile(val file: TransferFile) : Action()
 }
 
 // TODO error handling in knot????
@@ -55,7 +55,7 @@ private fun createSenderKnot(connection: SenderConnection) = knot<State, Change,
                 .map { event ->
                     when (event) {
                         is SenderConnection.Event.Handshake -> Change.ReceivedHandshake
-                        is SenderConnection.Event.AcceptedFiles -> Change.ReceivedAcceptedFiles(event.files)
+                        is SenderConnection.Event.AcceptedPaths -> Change.ReceivedAcceptedFiles(event.transferPaths)
                     }
                 }
                 .doOnError { logger.error(it) { "Event source failed" } }
@@ -75,15 +75,15 @@ private fun createSenderKnot(connection: SenderConnection) = knot<State, Change,
                     else -> unexpected(change)
                 }
                 State.AwaitingIntendedFiles -> when (change) {
-                    is Change.SendIntendedFiles -> State.AwaitingAcceptedFiles + Action.SendIntendedFiles(
-                        change.files
-                    )
+                    is Change.SendIntendedFiles -> State.AwaitingAcceptedFiles(change.files) +
+                        Action.SendIntendedFiles(change.files)
                     else -> unexpected(change)
                 }
-                State.AwaitingAcceptedFiles -> when (change) {
+                is State.AwaitingAcceptedFiles -> when (change) {
                     is Change.ReceivedAcceptedFiles -> {
-                        val firstFile = change.files.first()
-                        State.SendingFile(firstFile, 0, change.files - firstFile) +
+                        val firstPath = change.transferPaths.first()
+                        val firstFile = state.intendedFiles.first { it.transferPath == firstPath }
+                        State.SendingFile(firstFile, 0, state.intendedFiles - firstFile) +
                             Action.SendFile(firstFile)
                     }
                     else -> unexpected(change)

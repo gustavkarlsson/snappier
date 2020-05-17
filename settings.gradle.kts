@@ -11,6 +11,7 @@ include(
     "receiver-connection-default",
     "receiver-statemachine",
     "receiver-statemachine-knot",
+    "common-domain",
     "sender-files",
     "sender-files-buffered",
     "sender-serialization",

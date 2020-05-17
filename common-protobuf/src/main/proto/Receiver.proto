@@ -10,7 +10,7 @@ import "Common.proto";
 message Body {
     oneof message {
         Handshake handshake = 1;
-        AcceptedFiles acceptedFiles = 2;
+        AcceptedPaths acceptedPaths = 2;
     }
 }
 
@@ -18,6 +18,6 @@ message Handshake {
     required int32 protocolVersion = 1;
 }
 
-message AcceptedFiles {
-    repeated common.File file = 1;
+message AcceptedPaths {
+    repeated string path = 1;
 }
