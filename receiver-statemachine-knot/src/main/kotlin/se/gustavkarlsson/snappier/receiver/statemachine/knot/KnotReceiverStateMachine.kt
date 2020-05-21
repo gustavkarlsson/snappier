@@ -52,8 +52,6 @@ private sealed class Change {
 
     data class FileDataWritten(val bytes: Long) : Change()
 
-    object FileClosed : Change()
-
     object FileCompleted : Change()
 }
 
@@ -146,11 +144,10 @@ private fun createReceiverKnot(
                         val newCurrentReceivedBytes = state.currentReceivedBytes + change.bytes
                         state.copy(currentReceivedBytes = newCurrentReceivedBytes).only
                     }
-                    Change.FileCompleted -> state + Action.CloseFile
-                    Change.FileClosed -> if (state.remainingFiles.isEmpty()) {
-                        State.Completed.only
+                    Change.FileCompleted -> if (state.remainingFiles.isEmpty()) {
+                        State.Completed + Action.CloseFile
                     } else {
-                        State.AwaitingFile(state.remainingFiles).only
+                        State.AwaitingFile(state.remainingFiles) + Action.CloseFile
                     }
                     else -> unexpected(change)
                 }
@@ -182,7 +179,7 @@ private fun createReceiverKnot(
             }.doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.CloseFile> {
-            concatMap { fileWriter.close().andThen(Observable.just<Change>(Change.FileClosed)) }
+            concatMap { fileWriter.close().toObservable<Change>() }
                 .doOnError { logger.error(it) { "Action failed" } }
         }
     }
