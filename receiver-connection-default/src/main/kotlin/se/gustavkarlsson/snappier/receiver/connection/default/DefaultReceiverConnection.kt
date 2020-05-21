@@ -23,7 +23,7 @@ class DefaultReceiverConnection(
                 when (message) {
                     is SenderMessage.Handshake -> ReceiverConnection.Event.Handshake(message.protocolVersion)
                     is SenderMessage.IntendedFiles -> ReceiverConnection.Event.IntendedFiles(message.files)
-                    is SenderMessage.FileStart -> ReceiverConnection.Event.NewFile(message.file)
+                    is SenderMessage.FileStart -> ReceiverConnection.Event.NewFile(message.path)
                     is SenderMessage.FileData -> ReceiverConnection.Event.FileDataReceived(message.data)
                     SenderMessage.FileEnd -> ReceiverConnection.Event.FileCompleted
                 }

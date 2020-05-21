@@ -4,8 +4,7 @@ import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.common.domain.TransferFile
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
@@ -24,24 +23,24 @@ class KnotSenderStateMachine(
 
     override fun sendHandshake() = knot.change.accept(Change.SendHandshake)
 
-    override fun sendIntendedFiles(files: Collection<TransferFile>) =
+    override fun sendIntendedFiles(files: Collection<FileRef>) =
         knot.change.accept(Change.SendIntendedFiles(files))
 }
 
 private sealed class Change {
     object SendHandshake : Change()
     object ReceivedHandshake : Change()
-    data class SendIntendedFiles(val files: Collection<TransferFile>) : Change()
+    data class SendIntendedFiles(val files: Collection<FileRef>) : Change()
     data class ReceivedAcceptedFiles(val transferPaths: Collection<String>) : Change()
-    data class FileDataSent(val sent: Long) : Change()
+    data class FileDataSent(val sentBytes: Long) : Change()
     object FileCompleted : Change()
     object FileSendingFailed : Change()
 }
 
 private sealed class Action {
     object SendHandshake : Action()
-    data class SendIntendedFiles(val files: Collection<TransferFile>) : Action()
-    data class SendFile(val file: TransferFile) : Action()
+    data class SendIntendedFiles(val files: Collection<FileRef>) : Action()
+    data class SendFile(val file: FileRef) : Action()
 }
 
 // TODO error handling in knot????
@@ -93,8 +92,8 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
                 }
                 is State.SendingFile -> when (change) {
                     is Change.FileDataSent -> {
-                        val newCurrentSent = state.currentSent + change.sent
-                        state.copy(currentSent = newCurrentSent).only
+                        val newCurrentSent = state.currentSentBytes + change.sentBytes
+                        state.copy(currentSentBytes = newCurrentSent).only
                     }
                     Change.FileCompleted -> {
                         val nextFile = state.remainingFiles.firstOrNull()
@@ -124,8 +123,8 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
         }
         perform<Action.SendFile> {
             concatMap { action ->
-                val sendFileStart = connection.sendFileStart(action.file).toFlowable<Change>()
-                val sendData = fileReader.readFile(File(action.file.fileSystemPath, action.file.size))
+                val sendFileStart = connection.sendFileStart(action.file.transferPath).toFlowable<Change>()
+                val sendData = fileReader.readFile(action.file.fileSystemPath)
                     .concatMap { data ->
                         connection.sendFileData(data).andThen(Flowable.just(Change.FileDataSent(data.size.toLong())))
                     }

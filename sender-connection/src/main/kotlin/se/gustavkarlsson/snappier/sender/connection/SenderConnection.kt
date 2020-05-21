@@ -2,7 +2,7 @@ package se.gustavkarlsson.snappier.sender.connection
 
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
-import se.gustavkarlsson.snappier.common.domain.TransferFile
+import se.gustavkarlsson.snappier.common.domain.FileRef
 
 interface SenderConnection {
     val incoming: Observable<Event>
@@ -14,9 +14,9 @@ interface SenderConnection {
 
     fun sendHandshake(): Completable
 
-    fun sendIntendedFiles(files: Collection<TransferFile>): Completable
+    fun sendIntendedFiles(files: Collection<FileRef>): Completable
 
-    fun sendFileStart(file: TransferFile): Completable
+    fun sendFileStart(path: String): Completable
 
     fun sendFileData(data: ByteArray): Completable
 

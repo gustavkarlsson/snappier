@@ -28,7 +28,7 @@ private fun ProtoSender.IntendedFiles.toMessage(): SenderMessage.IntendedFiles =
     SenderMessage.IntendedFiles(fileList.map(ProtoCommon.File::toMessage))
 
 private fun ProtoSender.FileStart.toMessage(): SenderMessage.FileStart =
-    SenderMessage.FileStart(file.toMessage())
+    SenderMessage.FileStart(path)
 
 private fun ProtoSender.FileData.toMessage(): SenderMessage.FileData =
     SenderMessage.FileData(data.toByteArray())

@@ -1,13 +1,13 @@
 package se.gustavkarlsson.snappier.common.serialization.protobuf
 
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.protobuf.ProtoCommon
 
-fun File.toProto(): ProtoCommon.File =
+fun TransferFile.toProto(): ProtoCommon.File =
     ProtoCommon.File.newBuilder()
         .setPath(path)
         .setSize(size)
         .build()
 
-fun ProtoCommon.File.toMessage(): File =
-    File(path, size)
+fun ProtoCommon.File.toMessage(): TransferFile =
+    TransferFile(path, size)

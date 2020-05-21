@@ -2,8 +2,8 @@ package se.gustavkarlsson.snappier.common.message
 
 sealed class SenderMessage {
     data class Handshake(val protocolVersion: Int) : SenderMessage()
-    data class IntendedFiles(val files: Collection<File>) : SenderMessage()
-    data class FileStart(val file: File) : SenderMessage()
+    data class IntendedFiles(val files: Collection<TransferFile>) : SenderMessage()
+    data class FileStart(val path: String) : SenderMessage()
     data class FileData(val data: ByteArray) : SenderMessage() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

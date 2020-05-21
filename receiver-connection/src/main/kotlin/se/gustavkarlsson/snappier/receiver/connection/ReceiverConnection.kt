@@ -2,7 +2,7 @@ package se.gustavkarlsson.snappier.receiver.connection
 
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 
 interface ReceiverConnection {
@@ -10,8 +10,8 @@ interface ReceiverConnection {
 
     sealed class Event {
         data class Handshake(val protocolVersion: Int) : Event()
-        data class IntendedFiles(val files: Collection<File>) : Event()
-        data class NewFile(val file: File) : Event()
+        data class IntendedFiles(val files: Collection<TransferFile>) : Event()
+        data class NewFile(val path: String) : Event()
         data class FileDataReceived(val data: ByteArray) : Event() {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true

@@ -2,8 +2,7 @@ package se.gustavkarlsson.snappier.app
 
 import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.subjects.PublishSubject
-import se.gustavkarlsson.snappier.common.domain.TransferFile
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.receiver.connection.default.DefaultReceiverConnection
@@ -16,7 +15,7 @@ import se.gustavkarlsson.snappier.sender.files.buffered.BufferedFileReader
 import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufReceiverMessageDeserializer
 import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufSenderMessageSerializer
 import se.gustavkarlsson.snappier.sender.statemachine.knot.KnotSenderStateMachine
-import java.io.File as JavaFile
+import java.io.File
 
 private const val PROTOCOL_VERSION = 1
 private const val FILE_BUFFER_SIZE = 8192
@@ -60,10 +59,10 @@ fun main() {
     senderStateMachine.sendHandshake()
     senderStateMachine.sendIntendedFiles(
         listOf(
-            JavaFile("settings.gradle.kts"),
-            JavaFile("build.gradle.kts"),
-            JavaFile(".editorconfig")
-        ).map(JavaFile::toTransferFile)
+            File("settings.gradle.kts"),
+            File("build.gradle.kts"),
+            File(".editorconfig")
+        ).map(File::toFileRef)
     )
     receiverStateMachine.setAcceptedPaths(
         "received",
@@ -76,7 +75,5 @@ fun main() {
     Thread.sleep(1_000_000_000)
 }
 
-private fun JavaFile.toTransferFile(): TransferFile =
-    TransferFile(path, "transfer/$name", length())
-
-private fun JavaFile.toFile(): File = File(path, length())
+private fun File.toFileRef(): FileRef =
+    FileRef(path, "transfer/$name", length())

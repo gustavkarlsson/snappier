@@ -4,11 +4,11 @@ import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
-import se.gustavkarlsson.snappier.common.domain.TransferFile
+import se.gustavkarlsson.snappier.common.domain.FileRef
 
 private val logger = KotlinLogging.logger {}
 
@@ -30,14 +30,14 @@ class DefaultSenderConnection(
     override fun sendHandshake(): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.Handshake(protocolVersion)) }
 
-    override fun sendIntendedFiles(files: Collection<TransferFile>): Completable =
+    override fun sendIntendedFiles(files: Collection<FileRef>): Completable =
         Completable.fromAction {
-            val fileMessages = files.map(TransferFile::toMessageFile)
-            outgoing.onNext(SenderMessage.IntendedFiles(fileMessages))
+            val transferFiles = files.map(FileRef::toTransferFile)
+            outgoing.onNext(SenderMessage.IntendedFiles(transferFiles))
         }
 
-    override fun sendFileStart(file: TransferFile): Completable =
-        Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(file.toMessageFile())) }
+    override fun sendFileStart(path: String): Completable =
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(path)) }
 
     override fun sendFileData(data: ByteArray): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.FileData(data)) }
@@ -46,4 +46,4 @@ class DefaultSenderConnection(
         Completable.fromAction { outgoing.onNext(SenderMessage.FileEnd) }
 }
 
-private fun TransferFile.toMessageFile(): File = File(transferPath, size)
+private fun FileRef.toTransferFile(): TransferFile = TransferFile(transferPath, size)

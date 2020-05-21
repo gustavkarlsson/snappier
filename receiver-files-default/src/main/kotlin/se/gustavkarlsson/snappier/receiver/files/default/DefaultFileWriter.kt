@@ -9,9 +9,8 @@ import java.io.File
 
 class DefaultFileWriter(
     private val writeBufferSize: Int = DEFAULT_BUFFER_SIZE,
-    private val scheduler: Scheduler = Schedulers.io()
+    private val scheduler: Scheduler = Schedulers.io() // TODO How to use schedulers intelligently here?
 ) : FileWriter {
-    // TODO schedulers?
     private var currentStream: BufferedOutputStream? = null
 
     override fun create(path: String): Completable =
@@ -26,11 +25,11 @@ class DefaultFileWriter(
             }
         }
 
-    override fun write(byte: ByteArray): Completable =
+    override fun write(data: ByteArray): Completable =
         Completable.fromAction {
             synchronized(this) {
                 val stream = checkNotNull(currentStream) { "File is null" }
-                stream.write(byte)
+                stream.write(data)
             }
         }
 

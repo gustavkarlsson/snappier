@@ -6,7 +6,7 @@ interface FileWriter {
 
     fun create(path: String): Completable
 
-    fun write(byte: ByteArray): Completable
+    fun write(data: ByteArray): Completable
 
     fun close(): Completable
 }

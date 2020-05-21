@@ -1,7 +1,7 @@
 package se.gustavkarlsson.snappier.sender.serialization.protobuf
 
 import se.gustavkarlsson.snappier.common.serialization.protobuf.toProto
-import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.protobuf.ProtoSender
 import se.gustavkarlsson.snappier.sender.serialization.SenderMessageSerializer
@@ -32,7 +32,7 @@ private fun SenderMessage.IntendedFiles.toProto(): ProtoSender.Body =
     ProtoSender.Body.newBuilder()
         .setIntendedFiles(
             ProtoSender.IntendedFiles.newBuilder()
-                .addAllFile(files.map(File::toProto))
+                .addAllFile(files.map(TransferFile::toProto))
                 .build()
         )
         .build()
@@ -41,7 +41,7 @@ private fun SenderMessage.FileStart.toProto(): ProtoSender.Body =
     ProtoSender.Body.newBuilder()
         .setFileStart(
             ProtoSender.FileStart.newBuilder()
-                .setFile(file.toProto())
+                .setPath(path)
                 .build()
         )
         .build()
