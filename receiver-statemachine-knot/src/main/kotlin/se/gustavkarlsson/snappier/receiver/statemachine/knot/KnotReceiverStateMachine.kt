@@ -18,7 +18,7 @@ class KnotReceiverStateMachine(
     fileWriter: FileWriter
 ) : ReceiverStateMachine {
 
-    private val knot = createReceiverKnot(connection)
+    private val knot = createReceiverKnot(connection, fileWriter)
 
     override val state: Observable<State> get() = knot.state
 
@@ -50,23 +50,50 @@ private sealed class Change {
         override fun toString(): String = "FileDataReceived(size=${data.size})"
     }
 
+    data class FileDataWritten(val bytes: Long) : Change()
+
+    object FileClosed : Change()
+
     object FileCompleted : Change()
 }
 
 private sealed class Action {
     object SendHandshake : Action()
     data class SendAcceptedFiles(val transferPaths: Collection<String>) : Action()
+    data class CreateFile(val path: String) : Action()
+    data class WriteFileData(val data: ByteArray) : Action() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as SenderMessage.FileData
+
+            if (!data.contentEquals(other.data)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return data.contentHashCode()
+        }
+
+        override fun toString(): String = "WriteFileData(size=${data.size})"
+    }
+
+    object CloseFile : Action()
 }
 
 // TODO error handling in knot????
-private fun createReceiverKnot(connection: ReceiverConnection) = knot<State, Change, Action> {
+private fun createReceiverKnot(
+    connection: ReceiverConnection,
+    fileWriter: FileWriter
+) = knot<State, Change, Action> {
 
     state {
         watchAll { logger.info { "State: $it" } }
         initial = State.AwaitingHandshake
     }
 
-    // TODO write file before mapping to change
     events {
         source {
             connection.incoming
@@ -108,16 +135,19 @@ private fun createReceiverKnot(connection: ReceiverConnection) = knot<State, Cha
                 is State.AwaitingFile -> when (change) {
                     is Change.NewFile -> {
                         val newFile = state.remainingFiles.first { it.transferPath == change.transferPath }
-                        State.ReceivingFile(newFile, 0, state.remainingFiles - newFile).only
+                        State.ReceivingFile(newFile, 0, state.remainingFiles - newFile) +
+                            Action.CreateFile(newFile.fileSystemPath)
                     }
                     else -> unexpected(change)
                 }
                 is State.ReceivingFile -> when (change) {
-                    is Change.FileDataReceived -> {
-                        val newCurrentReceivedBytes = state.currentReceivedBytes + change.data.size
+                    is Change.FileDataReceived -> state + Action.WriteFileData(change.data)
+                    is Change.FileDataWritten -> {
+                        val newCurrentReceivedBytes = state.currentReceivedBytes + change.bytes
                         state.copy(currentReceivedBytes = newCurrentReceivedBytes).only
                     }
-                    Change.FileCompleted -> if (state.remainingFiles.isEmpty()) {
+                    Change.FileCompleted -> state + Action.CloseFile
+                    Change.FileClosed -> if (state.remainingFiles.isEmpty()) {
                         State.Completed.only
                     } else {
                         State.AwaitingFile(state.remainingFiles).only
@@ -135,11 +165,25 @@ private fun createReceiverKnot(connection: ReceiverConnection) = knot<State, Cha
         }
         perform<Action.SendHandshake> {
             concatMap { connection.sendHandshake().toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action source failed" } }
+                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendAcceptedFiles> {
             concatMap { action -> connection.sendAcceptedPaths(action.transferPaths).toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action source failed" } }
+                .doOnError { logger.error(it) { "Action failed" } }
+        }
+        perform<Action.CreateFile> {
+            concatMap { action -> fileWriter.create(action.path).toObservable<Change>() }
+                .doOnError { logger.error(it) { "Action failed" } }
+        }
+        perform<Action.WriteFileData> {
+            concatMap { action ->
+                fileWriter.write(action.data)
+                    .andThen(Observable.just<Change>(Change.FileDataWritten(action.data.size.toLong())))
+            }.doOnError { logger.error(it) { "Action failed" } }
+        }
+        perform<Action.CloseFile> {
+            concatMap { fileWriter.close().andThen(Observable.just<Change>(Change.FileClosed)) }
+                .doOnError { logger.error(it) { "Action failed" } }
         }
     }
 }

@@ -18,8 +18,8 @@ class DefaultFileWriter(
         Completable.fromAction {
             synchronized(this) {
                 check(currentStream == null) { "Stream is not null: $currentStream" }
-                File("received").mkdir() // FIXME don't hardcode this directory
-                val file = File("received/$path") // FIXME don't hardcode this directory
+                val file = File(path)
+                file.parentFile.mkdirs()
                 val created = file.createNewFile()
                 check(created) { "File already exists: $file" }
                 currentStream = file.outputStream().buffered(writeBufferSize)

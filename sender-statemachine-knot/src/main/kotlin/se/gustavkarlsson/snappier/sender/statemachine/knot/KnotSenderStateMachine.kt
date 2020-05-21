@@ -116,11 +116,11 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
         watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
             concatMap { connection.sendHandshake().toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action source failed" } }
+                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendIntendedFiles> {
             concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action source failed" } }
+                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendFile> {
             concatMap { action ->
