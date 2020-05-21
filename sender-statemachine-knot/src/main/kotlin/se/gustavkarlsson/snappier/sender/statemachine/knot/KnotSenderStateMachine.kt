@@ -1,10 +1,12 @@
 package se.gustavkarlsson.snappier.sender.statemachine.knot
 
 import de.halfbit.knot3.knot
+import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
-import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import se.gustavkarlsson.snappier.common.domain.TransferFile
+import se.gustavkarlsson.snappier.common.message.File
+import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
 import se.gustavkarlsson.snappier.sender.statemachine.State
@@ -16,13 +18,14 @@ class KnotSenderStateMachine(
     fileReader: FileReader
 ) : SenderStateMachine {
 
-    private val knot = createSenderKnot(connection)
+    private val knot = createSenderKnot(connection, fileReader)
 
     override val state: Observable<State> get() = knot.state
 
     override fun sendHandshake() = knot.change.accept(Change.SendHandshake)
 
-    override fun sendIntendedFiles(files: Collection<TransferFile>) = knot.change.accept(Change.SendIntendedFiles(files))
+    override fun sendIntendedFiles(files: Collection<TransferFile>) =
+        knot.change.accept(Change.SendIntendedFiles(files))
 }
 
 private sealed class Change {
@@ -42,7 +45,7 @@ private sealed class Action {
 }
 
 // TODO error handling in knot????
-private fun createSenderKnot(connection: SenderConnection) = knot<State, Change, Action> {
+private fun createSenderKnot(connection: SenderConnection, fileReader: FileReader) = knot<State, Change, Action> {
 
     state {
         watchAll { logger.info { "State: $it" } }
@@ -83,8 +86,8 @@ private fun createSenderKnot(connection: SenderConnection) = knot<State, Change,
                     is Change.ReceivedAcceptedFiles -> {
                         val firstPath = change.transferPaths.first()
                         val firstFile = state.intendedFiles.first { it.transferPath == firstPath }
-                        State.SendingFile(firstFile, 0, state.intendedFiles - firstFile) +
-                            Action.SendFile(firstFile)
+                        val remainingFiles = state.intendedFiles.filter { change.transferPaths.contains(it.transferPath) } - firstFile
+                        State.SendingFile(firstFile, 0, remainingFiles) + Action.SendFile(firstFile)
                     }
                     else -> unexpected(change)
                 }
@@ -119,16 +122,19 @@ private fun createSenderKnot(connection: SenderConnection) = knot<State, Change,
             concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
                 .doOnError { logger.error(it) { "Action source failed" } }
         }
-        // TODO read file before sending
         perform<Action.SendFile> {
             concatMap { action ->
-                Observable.concat(
-                    listOf(
-                        connection.sendFileStart(action.file).toObservable(),
-                        connection.sendFileData(byteArrayOf()).andThen(Observable.just(Change.FileDataSent(100))),
-                        connection.sendFileEnd().andThen(Observable.just(Change.FileCompleted))
-                    )
-                )
+                val sendFileStart = connection.sendFileStart(action.file).toFlowable<Change>()
+                val sendData = fileReader.readFile(File(action.file.fileSystemPath, action.file.size))
+                    .concatMap { data ->
+                        connection.sendFileData(data).andThen(Flowable.just(Change.FileDataSent(data.size.toLong())))
+                    }
+                val sendFileCompleted = connection.sendFileEnd().andThen(Flowable.just(Change.FileCompleted))
+
+                sendFileStart
+                    .concatWith(sendData)
+                    .concatWith(sendFileCompleted)
+                    .toObservable()
             }
         }
     }
