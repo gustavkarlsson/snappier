@@ -3,8 +3,8 @@ package se.gustavkarlsson.snappier.receiver.statemachine.knot
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
+import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.domain.FileRef
-import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
 import se.gustavkarlsson.snappier.receiver.files.FileWriter
@@ -31,27 +31,8 @@ private sealed class Change {
     data class IntendedFilesReceived(val files: Collection<TransferFile>) : Change()
     data class SendAcceptedPaths(val receivePath: String, val acceptedPaths: Collection<String>) : Change()
     data class FileStartReceived(val transferPath: String) : Change()
-    data class FileDataReceived(val data: ByteArray) : Change() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as SenderMessage.FileData
-
-            if (!data.contentEquals(other.data)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return data.contentHashCode()
-        }
-
-        override fun toString(): String = "FileDataReceived(size=${data.size})"
-    }
-
+    data class FileDataReceived(val data: Bytes) : Change()
     data class FileDataWritten(val writtenBytes: Long) : Change()
-
     object FileEndReceived : Change()
 }
 
@@ -59,25 +40,7 @@ private sealed class Action {
     object SendHandshake : Action()
     data class SendAcceptedFiles(val transferPaths: Collection<String>) : Action()
     data class CreateFile(val path: String) : Action()
-    data class WriteFileData(val data: ByteArray) : Action() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as SenderMessage.FileData
-
-            if (!data.contentEquals(other.data)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return data.contentHashCode()
-        }
-
-        override fun toString(): String = "WriteFileData(size=${data.size})"
-    }
-
+    data class WriteFileData(val data: Bytes) : Action()
     object CloseFile : Action()
 }
 
@@ -175,8 +138,8 @@ private fun createReceiverKnot(
         }
         perform<Action.WriteFileData> {
             concatMap { action ->
-                fileWriter.write(action.data)
-                    .andThen(Observable.just<Change>(Change.FileDataWritten(action.data.size.toLong())))
+                fileWriter.write(action.data.array)
+                    .andThen(Observable.just<Change>(Change.FileDataWritten(action.data.array.size.toLong())))
             }.doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.CloseFile> {

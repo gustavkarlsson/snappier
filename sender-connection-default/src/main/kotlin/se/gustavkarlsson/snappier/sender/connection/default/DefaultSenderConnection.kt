@@ -4,6 +4,7 @@ import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import mu.KotlinLogging
+import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
@@ -40,7 +41,7 @@ class DefaultSenderConnection(
         Completable.fromAction { outgoing.onNext(SenderMessage.FileStart(path)) }
 
     override fun sendFileData(data: ByteArray): Completable =
-        Completable.fromAction { outgoing.onNext(SenderMessage.FileData(data)) }
+        Completable.fromAction { outgoing.onNext(SenderMessage.FileData(Bytes(data))) }
 
     override fun sendFileEnd(): Completable =
         Completable.fromAction { outgoing.onNext(SenderMessage.FileEnd) }

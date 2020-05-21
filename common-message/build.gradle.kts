@@ -8,4 +8,5 @@ repositories {
 
 dependencies {
     api(kotlin("stdlib-jdk8"))
+    api(project(":common-domain"))
 }

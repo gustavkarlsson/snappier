@@ -1,5 +1,6 @@
 package se.gustavkarlsson.snappier.sender.serialization.protobuf
 
+import com.google.protobuf.ByteString
 import se.gustavkarlsson.snappier.common.serialization.protobuf.toProto
 import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.SenderMessage
@@ -50,7 +51,7 @@ private fun SenderMessage.FileData.toProto(): ProtoSender.Body =
     ProtoSender.Body.newBuilder()
         .setFileData(
             ProtoSender.FileData.newBuilder()
-                .setData(com.google.protobuf.ByteString.copyFrom(data))
+                .setData(ByteString.copyFrom(data.array))
                 .build()
         )
         .build()

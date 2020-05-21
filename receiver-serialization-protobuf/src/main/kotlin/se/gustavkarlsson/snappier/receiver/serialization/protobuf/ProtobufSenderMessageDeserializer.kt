@@ -1,5 +1,6 @@
 package se.gustavkarlsson.snappier.receiver.serialization.protobuf
 
+import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.serialization.protobuf.toMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.protobuf.ProtoCommon
@@ -31,7 +32,7 @@ private fun ProtoSender.FileStart.toMessage(): SenderMessage.FileStart =
     SenderMessage.FileStart(path)
 
 private fun ProtoSender.FileData.toMessage(): SenderMessage.FileData =
-    SenderMessage.FileData(data.toByteArray())
+    SenderMessage.FileData(Bytes(data.toByteArray()))
 
 @Suppress("unused")
 private fun ProtoSender.FileEnd.toMessage(): SenderMessage.FileEnd =
