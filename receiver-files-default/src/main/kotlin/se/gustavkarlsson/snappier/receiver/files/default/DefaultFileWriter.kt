@@ -28,7 +28,7 @@ class DefaultFileWriter(
     override fun write(data: ByteArray): Completable =
         Completable.fromAction {
             synchronized(this) {
-                val stream = checkNotNull(currentStream) { "File is null" }
+                val stream = checkNotNull(currentStream) { "Stream is null" }
                 stream.write(data)
             }
         }
@@ -36,7 +36,7 @@ class DefaultFileWriter(
     override fun close(): Completable =
         Completable.fromAction {
             synchronized(this) {
-                val stream = checkNotNull(currentStream) { "File is null" }
+                val stream = checkNotNull(currentStream) { "Stream is null" }
                 stream.flush()
                 stream.close()
                 currentStream = null
