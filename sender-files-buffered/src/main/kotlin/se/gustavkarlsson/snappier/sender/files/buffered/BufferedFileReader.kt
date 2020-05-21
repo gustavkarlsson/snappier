@@ -19,12 +19,12 @@ class BufferedFileReader(
     override fun readFile(file: File): Flowable<ByteArray> =
         Single
             .fromCallable { FileInputStream(file.path).iterableBuffered(readBufferSize, chunkBufferSize) }
-            .flatMapPublisher {
+            .flatMapPublisher { stream ->
                 Flowable.using(
-                    { it },
+                    { stream },
                     { Flowable.fromIterable(it).subscribeOn(scheduler) },
                     InputStream::close
-                )
+                ).filter { it.isNotEmpty() }
             }
 }
 
