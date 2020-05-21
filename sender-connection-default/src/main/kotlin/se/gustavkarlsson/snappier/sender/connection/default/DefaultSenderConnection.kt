@@ -22,8 +22,8 @@ class DefaultSenderConnection(
             .doOnNext { logger.info { "Incoming message: $it" } }
             .map { message ->
                 when (message) {
-                    is ReceiverMessage.Handshake -> SenderConnection.Event.Handshake(message.protocolVersion)
-                    is ReceiverMessage.AcceptedPaths -> SenderConnection.Event.AcceptedPaths(message.transferPaths)
+                    is ReceiverMessage.Handshake -> SenderConnection.Event.HandshakeReceived(message.protocolVersion)
+                    is ReceiverMessage.AcceptedPaths -> SenderConnection.Event.AcceptedPathsReceived(message.transferPaths)
                 }
             }
 

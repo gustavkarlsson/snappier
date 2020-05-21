@@ -29,9 +29,9 @@ class KnotSenderStateMachine(
 
 private sealed class Change {
     object SendHandshake : Change()
-    object ReceivedHandshake : Change()
+    object HandshakeReceived : Change()
     data class SendIntendedFiles(val files: Collection<FileRef>) : Change()
-    data class ReceivedAcceptedFiles(val transferPaths: Collection<String>) : Change()
+    data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Change()
     data class FileDataSent(val sentBytes: Long) : Change()
     object FileCompleted : Change()
     object FileSendingFailed : Change()
@@ -56,8 +56,8 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
             connection.incoming
                 .map { event ->
                     when (event) {
-                        is SenderConnection.Event.Handshake -> Change.ReceivedHandshake
-                        is SenderConnection.Event.AcceptedPaths -> Change.ReceivedAcceptedFiles(event.transferPaths)
+                        is SenderConnection.Event.HandshakeReceived -> Change.HandshakeReceived
+                        is SenderConnection.Event.AcceptedPathsReceived -> Change.AcceptedPathsReceived(event.transferPaths)
                     }
                 }
                 .doOnError { logger.error(it) { "Event source failed" } }
@@ -73,7 +73,8 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
                     else -> unexpected(change)
                 }
                 State.AwaitingHandshake -> when (change) {
-                    Change.ReceivedHandshake -> State.AwaitingIntendedFiles.only // TODO Verify protocol version
+                    // TODO Verify protocol version
+                    Change.HandshakeReceived -> State.AwaitingIntendedFiles.only
                     else -> unexpected(change)
                 }
                 State.AwaitingIntendedFiles -> when (change) {
@@ -82,7 +83,7 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
                     else -> unexpected(change)
                 }
                 is State.AwaitingAcceptedFiles -> when (change) {
-                    is Change.ReceivedAcceptedFiles -> {
+                    is Change.AcceptedPathsReceived -> {
                         val firstPath = change.transferPaths.first()
                         val firstFile = state.intendedFiles.first { it.transferPath == firstPath }
                         val remainingFiles = state.intendedFiles.filter { change.transferPaths.contains(it.transferPath) } - firstFile

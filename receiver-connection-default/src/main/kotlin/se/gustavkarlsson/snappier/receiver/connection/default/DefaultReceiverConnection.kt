@@ -21,11 +21,11 @@ class DefaultReceiverConnection(
             .doOnNext { logger.info { "Incoming message: $it" } }
             .map { message ->
                 when (message) {
-                    is SenderMessage.Handshake -> ReceiverConnection.Event.Handshake(message.protocolVersion)
-                    is SenderMessage.IntendedFiles -> ReceiverConnection.Event.IntendedFiles(message.files)
-                    is SenderMessage.FileStart -> ReceiverConnection.Event.NewFile(message.path)
+                    is SenderMessage.Handshake -> ReceiverConnection.Event.HandshakeReceived(message.protocolVersion)
+                    is SenderMessage.IntendedFiles -> ReceiverConnection.Event.IntendedFilesReceived(message.files)
+                    is SenderMessage.FileStart -> ReceiverConnection.Event.FileStartReceived(message.path)
                     is SenderMessage.FileData -> ReceiverConnection.Event.FileDataReceived(message.data)
-                    SenderMessage.FileEnd -> ReceiverConnection.Event.FileCompleted
+                    SenderMessage.FileEnd -> ReceiverConnection.Event.FileEndReceived
                 }
             }
 

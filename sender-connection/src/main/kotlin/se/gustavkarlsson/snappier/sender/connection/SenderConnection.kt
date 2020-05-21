@@ -8,8 +8,8 @@ interface SenderConnection {
     val incoming: Observable<Event>
 
     sealed class Event {
-        data class Handshake(val protocolVersion: Int) : Event()
-        data class AcceptedPaths(val transferPaths: Collection<String>) : Event()
+        data class HandshakeReceived(val protocolVersion: Int) : Event()
+        data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Event()
     }
 
     fun sendHandshake(): Completable

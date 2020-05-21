@@ -4,8 +4,8 @@ import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.domain.FileRef
-import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.common.message.SenderMessage
+import se.gustavkarlsson.snappier.common.message.TransferFile
 import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
 import se.gustavkarlsson.snappier.receiver.files.FileWriter
 import se.gustavkarlsson.snappier.receiver.statemachine.ReceiverStateMachine
@@ -23,14 +23,14 @@ class KnotReceiverStateMachine(
     override val state: Observable<State> get() = knot.state
 
     override fun setAcceptedPaths(receivePath: String, acceptedPaths: Collection<String>) =
-        knot.change.accept(Change.SendAcceptedFiles(receivePath, acceptedPaths))
+        knot.change.accept(Change.SendAcceptedPaths(receivePath, acceptedPaths))
 }
 
 private sealed class Change {
-    object ReceivedHandshake : Change()
-    data class ReceivedIntendedFiles(val files: Collection<TransferFile>) : Change()
-    data class SendAcceptedFiles(val receivePath: String, val acceptedPaths: Collection<String>) : Change()
-    data class NewFile(val transferPath: String) : Change()
+    object HandshakeReceived : Change()
+    data class IntendedFilesReceived(val files: Collection<TransferFile>) : Change()
+    data class SendAcceptedPaths(val receivePath: String, val acceptedPaths: Collection<String>) : Change()
+    data class FileStartReceived(val transferPath: String) : Change()
     data class FileDataReceived(val data: ByteArray) : Change() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -52,7 +52,7 @@ private sealed class Change {
 
     data class FileDataWritten(val writtenBytes: Long) : Change()
 
-    object FileCompleted : Change()
+    object FileEndReceived : Change()
 }
 
 private sealed class Action {
@@ -97,11 +97,11 @@ private fun createReceiverKnot(
             connection.incoming
                 .map { event ->
                     when (event) {
-                        is ReceiverConnection.Event.Handshake -> Change.ReceivedHandshake
-                        is ReceiverConnection.Event.IntendedFiles -> Change.ReceivedIntendedFiles(event.files)
-                        is ReceiverConnection.Event.NewFile -> Change.NewFile(event.path)
+                        is ReceiverConnection.Event.HandshakeReceived -> Change.HandshakeReceived
+                        is ReceiverConnection.Event.IntendedFilesReceived -> Change.IntendedFilesReceived(event.files)
+                        is ReceiverConnection.Event.FileStartReceived -> Change.FileStartReceived(event.path)
                         is ReceiverConnection.Event.FileDataReceived -> Change.FileDataReceived(event.data)
-                        ReceiverConnection.Event.FileCompleted -> Change.FileCompleted
+                        ReceiverConnection.Event.FileEndReceived -> Change.FileEndReceived
                     }
                 }
                 .doOnError { logger.error(it) { "Event source failed" } }
@@ -113,15 +113,16 @@ private fun createReceiverKnot(
         reduce { change ->
             when (val state = this) {
                 State.AwaitingHandshake -> when (change) {
-                    Change.ReceivedHandshake -> State.AwaitingIntendedFiles.only + Action.SendHandshake // TODO Verify protocol version
+                    // TODO Verify protocol version
+                    Change.HandshakeReceived -> State.AwaitingIntendedFiles.only + Action.SendHandshake
                     else -> unexpected(change)
                 }
                 State.AwaitingIntendedFiles -> when (change) {
-                    is Change.ReceivedIntendedFiles -> State.AwaitingAcceptedPaths(change.files).only
+                    is Change.IntendedFilesReceived -> State.AwaitingAcceptedPaths(change.files).only
                     else -> unexpected(change)
                 }
                 is State.AwaitingAcceptedPaths -> when (change) {
-                    is Change.SendAcceptedFiles -> {
+                    is Change.SendAcceptedPaths -> {
                         val remainingFiles = state.intendedFiles
                             .filter { change.acceptedPaths.contains(it.path) }
                             .map { FileRef(change.receivePath + '/' + it.path, it.path, it.size) }
@@ -131,7 +132,7 @@ private fun createReceiverKnot(
                     else -> unexpected(change)
                 }
                 is State.AwaitingFile -> when (change) {
-                    is Change.NewFile -> {
+                    is Change.FileStartReceived -> {
                         val newFile = state.remainingFiles.first { it.transferPath == change.transferPath }
                         State.ReceivingFile(newFile, 0, state.remainingFiles - newFile) +
                             Action.CreateFile(newFile.fileSystemPath)
@@ -144,7 +145,7 @@ private fun createReceiverKnot(
                         val newCurrentReceivedBytes = state.currentReceivedBytes + change.writtenBytes
                         state.copy(currentReceivedBytes = newCurrentReceivedBytes).only
                     }
-                    Change.FileCompleted -> if (state.remainingFiles.isEmpty()) {
+                    Change.FileEndReceived -> if (state.remainingFiles.isEmpty()) {
                         State.Completed + Action.CloseFile
                     } else {
                         State.AwaitingFile(state.remainingFiles) + Action.CloseFile

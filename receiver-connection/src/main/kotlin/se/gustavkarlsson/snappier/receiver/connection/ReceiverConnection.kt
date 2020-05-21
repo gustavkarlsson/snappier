@@ -9,9 +9,9 @@ interface ReceiverConnection {
     val incoming: Observable<Event>
 
     sealed class Event {
-        data class Handshake(val protocolVersion: Int) : Event()
-        data class IntendedFiles(val files: Collection<TransferFile>) : Event()
-        data class NewFile(val path: String) : Event()
+        data class HandshakeReceived(val protocolVersion: Int) : Event()
+        data class IntendedFilesReceived(val files: Collection<TransferFile>) : Event()
+        data class FileStartReceived(val path: String) : Event()
         data class FileDataReceived(val data: ByteArray) : Event() {
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
@@ -31,7 +31,7 @@ interface ReceiverConnection {
             override fun toString(): String = "FileDataReceived(size=${data.size})"
         }
 
-        object FileCompleted : Event()
+        object FileEndReceived : Event()
     }
 
     fun sendHandshake(): Completable
