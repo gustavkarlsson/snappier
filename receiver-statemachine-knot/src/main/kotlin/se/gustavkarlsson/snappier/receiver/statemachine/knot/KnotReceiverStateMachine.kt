@@ -44,7 +44,6 @@ private sealed class Action {
     object CloseFile : Action()
 }
 
-// TODO error handling in knot????
 private fun createReceiverKnot(
     connection: ReceiverConnection,
     fileWriter: FileWriter
@@ -67,7 +66,6 @@ private fun createReceiverKnot(
                         ReceiverConnection.Event.FileEndReceived -> Change.FileEndReceived
                     }
                 }
-                .doOnError { logger.error(it) { "Event source failed" } }
         }
     }
 
@@ -126,25 +124,21 @@ private fun createReceiverKnot(
         }
         perform<Action.SendHandshake> {
             concatMap { connection.sendHandshake().toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendAcceptedFiles> {
             concatMap { action -> connection.sendAcceptedPaths(action.transferPaths).toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.CreateFile> {
             concatMap { action -> fileWriter.create(action.path).toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.WriteFileData> {
             concatMap { action ->
                 fileWriter.write(action.data.array)
                     .andThen(Observable.just<Change>(Change.FileDataWritten(action.data.array.size.toLong())))
-            }.doOnError { logger.error(it) { "Action failed" } }
+            }
         }
         perform<Action.CloseFile> {
             concatMap { fileWriter.close().toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
     }
 }

@@ -43,7 +43,6 @@ private sealed class Action {
     data class SendFile(val file: FileRef) : Action()
 }
 
-// TODO error handling in knot????
 private fun createSenderKnot(connection: SenderConnection, fileReader: FileReader) = knot<State, Change, Action> {
 
     state {
@@ -60,7 +59,6 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
                         is SenderConnection.Event.AcceptedPathsReceived -> Change.AcceptedPathsReceived(event.transferPaths)
                     }
                 }
-                .doOnError { logger.error(it) { "Event source failed" } }
         }
     }
 
@@ -86,7 +84,8 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
                     is Change.AcceptedPathsReceived -> {
                         val firstPath = change.transferPaths.first()
                         val firstFile = state.intendedFiles.first { it.transferPath == firstPath }
-                        val remainingFiles = state.intendedFiles.filter { change.transferPaths.contains(it.transferPath) } - firstFile
+                        val remainingFiles =
+                            state.intendedFiles.filter { change.transferPaths.contains(it.transferPath) } - firstFile
                         State.SendingFile(firstFile, 0, remainingFiles) + Action.SendFile(firstFile)
                     }
                     else -> unexpected(change)
@@ -116,11 +115,9 @@ private fun createSenderKnot(connection: SenderConnection, fileReader: FileReade
         watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
             concatMap { connection.sendHandshake().toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendIntendedFiles> {
             concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
-                .doOnError { logger.error(it) { "Action failed" } }
         }
         perform<Action.SendFile> {
             concatMap { action ->
