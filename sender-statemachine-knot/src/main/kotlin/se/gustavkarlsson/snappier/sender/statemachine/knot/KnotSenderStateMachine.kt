@@ -109,10 +109,14 @@ private fun createSenderKnot(
     actions {
         watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
+            @Suppress("RemoveExplicitTypeArguments")
             concatMap { connection.sendHandshake().toObservable<Change>() }
         }
         perform<Action.SendIntendedFiles> {
-            concatMap { action -> connection.sendIntendedFiles(action.files).toObservable<Change>() }
+            concatMap { action ->
+                @Suppress("RemoveExplicitTypeArguments")
+                connection.sendIntendedFiles(action.files).toObservable<Change>()
+            }
         }
         perform<Action.SendFile> {
             concatMap { action ->
