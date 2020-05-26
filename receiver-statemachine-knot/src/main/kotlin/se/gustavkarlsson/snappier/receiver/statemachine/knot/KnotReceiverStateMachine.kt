@@ -33,6 +33,7 @@ private sealed class Change {
     data class FileStartReceived(val transferPath: String) : Change()
     data class FileDataReceived(val data: Bytes) : Change()
     data class FileDataWritten(val writtenBytes: Long) : Change()
+    data class ConnectionError(val cause: Throwable) : Change()
     object FileEndReceived : Change()
 }
 
@@ -64,6 +65,7 @@ private fun createReceiverKnot(
                         is ReceiverConnection.Event.FileStartReceived -> Change.FileStartReceived(event.path)
                         is ReceiverConnection.Event.FileDataReceived -> Change.FileDataReceived(event.data)
                         ReceiverConnection.Event.FileEndReceived -> Change.FileEndReceived
+                        is ReceiverConnection.Event.Error -> Change.ConnectionError(event.cause)
                     }
                 }
         }
@@ -119,9 +121,7 @@ private fun createReceiverKnot(
     }
 
     actions {
-        watchAll {
-            watchAll { logger.info { "Action: $it" } }
-        }
+        watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
             concatMap { connection.sendHandshake().toObservable<Change>() }
         }

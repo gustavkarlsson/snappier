@@ -10,6 +10,7 @@ interface SenderConnection {
     sealed class Event {
         data class HandshakeReceived(val protocolVersion: Int) : Event()
         data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Event()
+        data class Error(val cause: Throwable) : Event()
     }
 
     fun sendHandshake(): Completable

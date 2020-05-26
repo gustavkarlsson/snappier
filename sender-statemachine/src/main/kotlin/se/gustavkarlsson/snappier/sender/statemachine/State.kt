@@ -14,6 +14,6 @@ sealed class State {
     ) : State()
 
     object Completed : State()
-    object TransferFailed : State()
+    data class Failed(val message: String) : State()
     // TODO Add abort and pause/resume
 }

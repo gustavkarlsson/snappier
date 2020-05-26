@@ -14,6 +14,7 @@ interface ReceiverConnection {
         data class FileStartReceived(val path: String) : Event()
         data class FileDataReceived(val data: Bytes) : Event()
         object FileEndReceived : Event()
+        data class Error(val cause: Throwable) : Event()
     }
 
     fun sendHandshake(): Completable

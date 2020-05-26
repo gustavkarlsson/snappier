@@ -53,7 +53,7 @@ fun main() {
     val fileReader = BufferedFileReader(FILE_BUFFER_SIZE, TRANSFER_BUFFER_SIZE)
     val fileWriter = DefaultFileWriter(FILE_BUFFER_SIZE)
 
-    val senderStateMachine = KnotSenderStateMachine(senderConnection, fileReader).apply { state.subscribe() }
+    val senderStateMachine = KnotSenderStateMachine(PROTOCOL_VERSION, senderConnection, fileReader).apply { state.subscribe() }
     val receiverStateMachine = KnotReceiverStateMachine(receiverConnection, fileWriter).apply { state.subscribe() }
 
     senderStateMachine.sendHandshake()
