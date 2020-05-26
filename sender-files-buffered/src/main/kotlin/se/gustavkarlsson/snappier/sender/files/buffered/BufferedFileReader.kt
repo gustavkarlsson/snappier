@@ -21,21 +21,15 @@ class BufferedFileReader(
             .flatMapPublisher { stream ->
                 Flowable.using(
                     { stream },
-                    { Flowable.fromIterable(it).subscribeOn(scheduler) },
+                    { Flowable.fromIterable(it) },
                     InputStream::close
                 ).filter { it.isNotEmpty() }
             }
+            .subscribeOn(scheduler)
 }
 
-private fun InputStream.iterableBuffered(
-    readBufferSize: Int,
-    iteratorBufferSize: Int
-): IterableBufferedInputStream =
-    IterableBufferedInputStream(
-        this,
-        readBufferSize,
-        iteratorBufferSize
-    )
+private fun InputStream.iterableBuffered(readBufferSize: Int, iteratorBufferSize: Int): IterableBufferedInputStream =
+    IterableBufferedInputStream(this, readBufferSize, iteratorBufferSize)
 
 private class IterableBufferedInputStream(
     inputStream: InputStream,
@@ -53,9 +47,8 @@ private class IterableBufferedInputStream(
         override fun next(): ByteArray {
             val buffer = ByteArray(iteratorBufferSize)
             val read = read(buffer)
-            hasMore = read > -1
             return when {
-                read == -1 -> EMPTY_BYTE_ARRAY
+                read == -1 -> EMPTY_BYTE_ARRAY.also { hasMore = false }
                 read < buffer.size -> buffer.copyOf(read)
                 else -> buffer
             }
