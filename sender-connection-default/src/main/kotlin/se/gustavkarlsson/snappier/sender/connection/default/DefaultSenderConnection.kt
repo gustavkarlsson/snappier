@@ -19,16 +19,16 @@ class DefaultSenderConnection(
     private val outgoing: Observer<SenderMessage>,
     private val protocolVersion: Int
 ) : SenderConnection {
-    override val incoming: Observable<SenderConnection.Event> =
+    override val incoming: Observable<SenderConnection.ReceivedEvent> =
         incoming
             .doOnNext { logger.info { "Incoming message: $it" } }
             .map { message ->
                 when (message) {
-                    is ReceiverMessage.Handshake -> SenderConnection.Event.HandshakeReceived(message.protocolVersion)
-                    is ReceiverMessage.AcceptedPaths -> SenderConnection.Event.AcceptedPathsReceived(message.transferPaths)
+                    is ReceiverMessage.Handshake -> SenderConnection.ReceivedEvent.Handshake(message.protocolVersion)
+                    is ReceiverMessage.AcceptedPaths -> SenderConnection.ReceivedEvent.AcceptedPaths(message.transferPaths)
                 }
             }
-            .onErrorReturn { SenderConnection.Event.Error(it) }
+            .onErrorReturn { SenderConnection.ReceivedEvent.Error(it) }
 
     override fun sendHandshake(): Single<SenderConnection.SendResult> =
         actionWithErrorHandling { outgoing.onNext(SenderMessage.Handshake(protocolVersion)) }

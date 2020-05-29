@@ -61,10 +61,10 @@ private fun createSenderKnot(
             connection.incoming
                 .map { event ->
                     when (event) {
-                        is SenderConnection.Event.HandshakeReceived -> Change.HandshakeReceived(event.protocolVersion)
-                        is SenderConnection.Event.AcceptedPathsReceived ->
+                        is SenderConnection.ReceivedEvent.Handshake -> Change.HandshakeReceived(event.protocolVersion)
+                        is SenderConnection.ReceivedEvent.AcceptedPaths ->
                             Change.AcceptedPathsReceived(event.transferPaths)
-                        is SenderConnection.Event.Error -> Change.ConnectionError(event.cause)
+                        is SenderConnection.ReceivedEvent.Error -> Change.ConnectionError(event.cause)
                     }
                 }
         }

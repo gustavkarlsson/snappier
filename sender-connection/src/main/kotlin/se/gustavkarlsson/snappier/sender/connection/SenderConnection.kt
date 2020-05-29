@@ -5,13 +5,13 @@ import io.reactivex.rxjava3.core.Single
 import se.gustavkarlsson.snappier.common.domain.FileRef
 
 interface SenderConnection {
-    sealed class Event {
-        data class HandshakeReceived(val protocolVersion: Int) : Event()
-        data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Event()
-        data class Error(val cause: Throwable) : Event()
+    sealed class ReceivedEvent {
+        data class Handshake(val protocolVersion: Int) : ReceivedEvent()
+        data class AcceptedPaths(val transferPaths: Collection<String>) : ReceivedEvent()
+        data class Error(val cause: Throwable) : ReceivedEvent()
     }
 
-    val incoming: Observable<Event>
+    val incoming: Observable<ReceivedEvent>
 
     sealed class SendResult {
         object Success : SendResult()
