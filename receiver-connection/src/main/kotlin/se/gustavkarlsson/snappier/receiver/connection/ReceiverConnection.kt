@@ -1,23 +1,28 @@
 package se.gustavkarlsson.snappier.receiver.connection
 
-import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.message.TransferFile
 
 interface ReceiverConnection {
-    val incoming: Observable<Event>
-
-    sealed class Event {
-        data class HandshakeReceived(val protocolVersion: Int) : Event()
-        data class IntendedFilesReceived(val files: Collection<TransferFile>) : Event()
-        data class FileStartReceived(val path: String) : Event()
-        data class FileDataReceived(val data: Bytes) : Event()
-        object FileEndReceived : Event()
-        data class Error(val cause: Throwable) : Event()
+    sealed class ReceivedEvent {
+        data class Handshake(val protocolVersion: Int) : ReceivedEvent()
+        data class IntendedFiles(val files: Collection<TransferFile>) : ReceivedEvent()
+        data class FileStart(val path: String) : ReceivedEvent()
+        data class FileData(val data: Bytes) : ReceivedEvent()
+        object FileEnd : ReceivedEvent()
+        data class Error(val cause: Throwable) : ReceivedEvent()
     }
 
-    fun sendHandshake(): Completable
+    val incoming: Observable<ReceivedEvent>
 
-    fun sendAcceptedPaths(transferPaths: Collection<String>): Completable
+    sealed class SendResult {
+        object Success : SendResult()
+        data class Error(val cause: Throwable) : SendResult()
+    }
+
+    fun sendHandshake(): Single<SendResult>
+
+    fun sendAcceptedPaths(transferPaths: Collection<String>): Single<SendResult>
 }
