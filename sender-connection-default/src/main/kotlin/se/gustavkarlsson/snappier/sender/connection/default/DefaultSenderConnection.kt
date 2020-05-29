@@ -23,9 +23,7 @@ class DefaultSenderConnection(
 
     private val open = AtomicBoolean(true)
 
-    private fun checkOpen() {
-        check(open.get()) { "Connection is closed" }
-    }
+    private fun checkOpen() = check(open.get()) { "Connection is closed" }
 
     override fun close() = open.set(false)
 
