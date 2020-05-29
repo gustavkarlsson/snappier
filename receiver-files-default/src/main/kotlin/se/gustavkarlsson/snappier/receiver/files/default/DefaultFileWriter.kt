@@ -2,6 +2,7 @@ package se.gustavkarlsson.snappier.receiver.files.default
 
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Scheduler
+import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.schedulers.Schedulers
 import se.gustavkarlsson.snappier.receiver.files.FileWriter
 import java.io.BufferedOutputStream
@@ -14,8 +15,8 @@ class DefaultFileWriter(
 ) : FileWriter {
     private var currentStream: BufferedOutputStream? = null
 
-    override fun create(path: String): Completable =
-        completable {
+    override fun create(path: String): Single<FileWriter.Result> =
+        actionWithErrorHandling {
             check(currentStream == null) { "Stream is not null: $currentStream" }
             val file = File(path)
             file.parentFile.mkdirs()
@@ -24,20 +25,23 @@ class DefaultFileWriter(
             currentStream = file.outputStream().buffered(writeBufferSize)
         }
 
-    override fun write(data: ByteArray): Completable =
-        completable {
+    override fun write(data: ByteArray): Single<FileWriter.Result> =
+        actionWithErrorHandling {
             val stream = checkNotNull(currentStream) { "Stream is null" }
             stream.write(data)
         }
 
-    override fun close(): Completable =
-        completable {
+    override fun close(): Single<FileWriter.Result> =
+        actionWithErrorHandling {
             val stream = checkNotNull(currentStream) { "Stream is null" }
             stream.flush()
             stream.close()
             currentStream = null
         }
 
-    private fun completable(block: () -> Unit) =
-        Completable.fromAction(block).subscribeOn(scheduler)
+    private fun actionWithErrorHandling(block: () -> Unit) =
+        Completable.fromAction(block)
+            .toSingleDefault<FileWriter.Result>(FileWriter.Result.Success)
+            .onErrorReturn { FileWriter.Result.Error(it) }
+            .subscribeOn(scheduler)
 }

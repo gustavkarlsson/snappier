@@ -37,7 +37,7 @@ class DefaultReceiverConnection(
         actionWithErrorHandling { outgoing.onNext(ReceiverMessage.AcceptedPaths(transferPaths)) }
 }
 
-private fun actionWithErrorHandling(block: () -> Unit): Single<ReceiverConnection.SendResult> =
+private fun actionWithErrorHandling(block: () -> Unit) =
     Completable.fromAction(block)
         .toSingleDefault<ReceiverConnection.SendResult>(ReceiverConnection.SendResult.Success)
         .onErrorReturn { ReceiverConnection.SendResult.Error(it) }

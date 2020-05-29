@@ -1,10 +1,14 @@
 package se.gustavkarlsson.snappier.receiver.files
 
-import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Single
 
-// TODO Use result class
 interface FileWriter {
-    fun create(path: String): Completable
-    fun write(data: ByteArray): Completable
-    fun close(): Completable
+    sealed class Result {
+        object Success : Result()
+        data class Error(val cause: Throwable) : Result()
+    }
+
+    fun create(path: String): Single<Result>
+    fun write(data: ByteArray): Single<Result>
+    fun close(): Single<Result>
 }

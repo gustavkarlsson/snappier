@@ -36,7 +36,7 @@ private sealed class Change {
     data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Change()
     data class FileDataSent(val sentBytes: Long) : Change()
     object FileEnd : Change()
-    data class ConnectionError(val cause: Throwable) : Change()
+    data class Error(val cause: Throwable) : Change()
 }
 
 private sealed class Action {
@@ -64,7 +64,7 @@ private fun createSenderKnot(
                         is SenderConnection.ReceivedEvent.Handshake -> Change.HandshakeReceived(event.protocolVersion)
                         is SenderConnection.ReceivedEvent.AcceptedPaths ->
                             Change.AcceptedPathsReceived(event.transferPaths)
-                        is SenderConnection.ReceivedEvent.Error -> Change.ConnectionError(event.cause)
+                        is SenderConnection.ReceivedEvent.Error -> Change.Error(event.cause)
                     }
                 }
         }
@@ -74,10 +74,10 @@ private fun createSenderKnot(
         watchAll { logger.info { "Change: $it" } }
         reduce { change ->
             val state = this
-            if (change is Change.ConnectionError &&
+            if (change is Change.Error &&
                 state !is State.Completed &&
                 state !is State.Failed
-            ) return@reduce connectionError(change)
+            ) return@reduce error(change)
             when (state) {
                 State.Initial -> when (change) {
                     Change.SendHandshake -> sendHandshake()
@@ -113,8 +113,8 @@ private fun createSenderKnot(
                 connection.sendHandshake()
                     .flatMapMaybe { result ->
                         when (result) {
-                            is SenderConnection.SendResult.Success -> Maybe.empty()
-                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                            SenderConnection.SendResult.Success -> Maybe.empty()
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.Error(result.cause))
                         }
                     }
             }
@@ -124,8 +124,8 @@ private fun createSenderKnot(
                 connection.sendIntendedFiles(action.files)
                     .flatMapMaybe { result ->
                         when (result) {
-                            is SenderConnection.SendResult.Success -> Maybe.empty()
-                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                            SenderConnection.SendResult.Success -> Maybe.empty()
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.Error(result.cause))
                         }
                     }
             }
@@ -136,7 +136,7 @@ private fun createSenderKnot(
                     .flatMapMaybe { result ->
                         when (result) {
                             SenderConnection.SendResult.Success -> Maybe.empty<Change>()
-                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.Error(result.cause))
                         }
                     }
 
@@ -146,7 +146,7 @@ private fun createSenderKnot(
                             .map { result ->
                                 when (result) {
                                     SenderConnection.SendResult.Success -> Change.FileDataSent(data.size.toLong())
-                                    is SenderConnection.SendResult.Error -> Change.ConnectionError(result.cause)
+                                    is SenderConnection.SendResult.Error -> Change.Error(result.cause)
                                 }
                             }
                     }
@@ -155,18 +155,21 @@ private fun createSenderKnot(
                     .map { result ->
                         when (result) {
                             SenderConnection.SendResult.Success -> Change.FileEnd
-                            is SenderConnection.SendResult.Error -> Change.ConnectionError(result.cause)
+                            is SenderConnection.SendResult.Error -> Change.Error(result.cause)
                         }
                     }
 
                 sendFileStart.toObservable()
                     .concatWith(sendData.toObservable())
                     .concatWith(sendFileEnd)
-                    .takeUntil { it is Change.ConnectionError }
+                    .takeUntil { it is Change.Error }
             }
         }
     }
 }
+
+private fun error(change: Change.Error): Effect<State, Action> =
+    effect(State.Failed(change.cause.message ?: change.cause.toString()))
 
 private fun sendHandshake(): Effect<State, Action> =
     effect(State.AwaitingHandshake, Action.SendHandshake)
@@ -191,7 +194,7 @@ private fun acceptedPathsReceived(
     val remainingFiles = state.intendedFiles.filter { change.transferPaths.contains(it.transferPath) } - firstFile
     val newState = State.SendingFile(firstFile, 0, remainingFiles)
     val newAction = Action.SendFile(firstFile)
-    return Effect.WithAction(newState, newAction)
+    return effect(newState, newAction)
 }
 
 private fun fileDataSent(
@@ -199,7 +202,7 @@ private fun fileDataSent(
     change: Change.FileDataSent
 ): Effect<State, Action> {
     val newCurrentSent = state.currentSentBytes + change.sentBytes
-    return Effect.WithAction(state.copy(currentSentBytes = newCurrentSent))
+    return effect(state.copy(currentSentBytes = newCurrentSent))
 }
 
 private fun fileCompleted(state: State.SendingFile): Effect<State, Action> {
@@ -210,9 +213,6 @@ private fun fileCompleted(state: State.SendingFile): Effect<State, Action> {
         effect(State.Completed)
     }
 }
-
-private fun connectionError(change: Change.ConnectionError): Effect<State, Action> =
-    effect(State.Failed(change.cause.message ?: change.cause.toString()))
 
 private fun effect(state: State, vararg actions: Action): Effect<State, Action> =
     when (actions.size) {

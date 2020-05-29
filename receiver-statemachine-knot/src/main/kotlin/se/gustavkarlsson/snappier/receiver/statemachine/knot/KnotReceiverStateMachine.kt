@@ -36,7 +36,7 @@ private sealed class Change {
     data class FileStartReceived(val transferPath: String) : Change()
     data class FileDataReceived(val data: Bytes) : Change()
     data class FileDataWritten(val writtenBytes: Long) : Change()
-    data class ConnectionError(val cause: Throwable) : Change()
+    data class Error(val cause: Throwable) : Change()
     object FileEndReceived : Change()
 }
 
@@ -69,7 +69,7 @@ private fun createReceiverKnot(
                         is ReceiverConnection.ReceivedEvent.FileStart -> Change.FileStartReceived(event.path)
                         is ReceiverConnection.ReceivedEvent.FileData -> Change.FileDataReceived(event.data)
                         ReceiverConnection.ReceivedEvent.FileEnd -> Change.FileEndReceived
-                        is ReceiverConnection.ReceivedEvent.Error -> Change.ConnectionError(event.cause)
+                        is ReceiverConnection.ReceivedEvent.Error -> Change.Error(event.cause)
                     }
                 }
         }
@@ -79,10 +79,10 @@ private fun createReceiverKnot(
         watchAll { logger.info { "Change: $it" } }
         reduce { change ->
             val state = this
-            if (change is Change.ConnectionError &&
+            if (change is Change.Error &&
                 state !is State.Completed &&
                 state !is State.Failed
-            ) return@reduce connectionError(change)
+            ) return@reduce error(change)
             when (state) {
                 State.AwaitingHandshake -> when (change) {
                     is Change.HandshakeReceived -> handshakeReceived(change, protocolVersion)
@@ -119,8 +119,8 @@ private fun createReceiverKnot(
                 connection.sendHandshake()
                     .flatMapMaybe { result ->
                         when (result) {
-                            is ReceiverConnection.SendResult.Success -> Maybe.empty()
-                            is ReceiverConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                            ReceiverConnection.SendResult.Success -> Maybe.empty()
+                            is ReceiverConnection.SendResult.Error -> Maybe.just(Change.Error(result.cause))
                         }
                     }
             }
@@ -130,28 +130,49 @@ private fun createReceiverKnot(
                 connection.sendAcceptedPaths(action.transferPaths)
                     .flatMapMaybe { result ->
                         when (result) {
-                            is ReceiverConnection.SendResult.Success -> Maybe.empty()
-                            is ReceiverConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                            ReceiverConnection.SendResult.Success -> Maybe.empty()
+                            is ReceiverConnection.SendResult.Error -> Maybe.just(Change.Error(result.cause))
                         }
                     }
             }
         }
         perform<Action.CreateFile> {
-            concatMap { action -> fileWriter.create(action.path).toObservable<Change>() }
+            concatMapMaybe { action ->
+                fileWriter.create(action.path)
+                    .flatMapMaybe { result ->
+                        when (result) {
+                            FileWriter.Result.Success -> Maybe.empty()
+                            is FileWriter.Result.Error -> Maybe.just(Change.Error(result.cause))
+                        }
+                    }
+            }
         }
         perform<Action.WriteFileData> {
-            concatMap { action ->
+            concatMapSingle { action ->
                 fileWriter.write(action.data.array)
-                    .andThen(Observable.just<Change>(Change.FileDataWritten(action.data.array.size.toLong())))
+                    .map { result ->
+                        when (result) {
+                            FileWriter.Result.Success -> Change.FileDataWritten(action.data.array.size.toLong())
+                            is FileWriter.Result.Error -> Change.Error(result.cause)
+                        }
+                    }
             }
         }
         perform<Action.CloseFile> {
-            concatMap { fileWriter.close().toObservable<Change>() }
+            concatMapMaybe {
+                fileWriter.close()
+                    .flatMapMaybe { result ->
+                        when (result) {
+                            FileWriter.Result.Success -> Maybe.empty()
+                            is FileWriter.Result.Error -> Maybe.just(Change.Error(result.cause))
+                        }
+                    }
+            }
         }
     }
 }
 
-private fun connectionError(change: Change.ConnectionError): Effect<State, Action> =
+private fun error(change: Change.Error): Effect<State, Action> =
     effect(State.Failed(change.cause.message ?: change.cause.toString()))
 
 private fun handshakeReceived(change: Change.HandshakeReceived, protocolVersion: Int): Effect<State, Action> =

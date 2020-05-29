@@ -49,9 +49,9 @@ class DefaultSenderConnection(
         actionWithErrorHandling { outgoing.onNext(SenderMessage.FileEnd) }
 }
 
-private fun actionWithErrorHandling(block: () -> Unit): Single<SenderConnection.SendResult> =
+private fun actionWithErrorHandling(block: () -> Unit) =
     Completable.fromAction(block)
         .toSingleDefault<SenderConnection.SendResult>(SenderConnection.SendResult.Success)
         .onErrorReturn { SenderConnection.SendResult.Error(it) }
 
-private fun FileRef.toTransferFile(): TransferFile = TransferFile(transferPath, size)
+private fun FileRef.toTransferFile() = TransferFile(transferPath, size)
