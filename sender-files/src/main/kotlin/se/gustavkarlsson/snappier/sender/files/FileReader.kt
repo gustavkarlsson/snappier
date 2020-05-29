@@ -1,8 +1,13 @@
 package se.gustavkarlsson.snappier.sender.files
 
 import io.reactivex.rxjava3.core.Flowable
+import se.gustavkarlsson.snappier.common.domain.Bytes
 
-// TODO Use result class
 interface FileReader {
-    fun readFile(path: String): Flowable<ByteArray>
+    sealed class Result {
+        data class Success(val data: Bytes) : Result()
+        data class Error(val cause: Throwable) : Result()
+    }
+
+    fun readFile(path: String): Flowable<Result>
 }

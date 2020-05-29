@@ -4,6 +4,7 @@ import de.halfbit.knot3.Effect
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
@@ -141,14 +142,20 @@ private fun createSenderKnot(
                     }
 
                 val sendData = fileReader.readFile(action.file.fileSystemPath)
-                    .flatMapSingle { data ->
-                        connection.sendFileData(data)
-                            .map { result ->
-                                when (result) {
-                                    SenderConnection.SendResult.Success -> Change.FileDataSent(data.size.toLong())
-                                    is SenderConnection.SendResult.Error -> Change.Error(result.cause)
-                                }
+                    .flatMapSingle { fileResult ->
+                        when (fileResult) {
+                            is FileReader.Result.Success -> {
+                                connection.sendFileData(fileResult.data.array)
+                                    .map { sendResult ->
+                                        when (sendResult) {
+                                            SenderConnection.SendResult.Success ->
+                                                Change.FileDataSent(fileResult.data.size.toLong())
+                                            is SenderConnection.SendResult.Error -> Change.Error(sendResult.cause)
+                                        }
+                                    }
                             }
+                            is FileReader.Result.Error -> Single.just(Change.Error(fileResult.cause))
+                        }
                     }
 
                 val sendFileEnd = connection.sendFileEnd()
@@ -208,7 +215,9 @@ private fun fileDataSent(
 private fun fileCompleted(state: State.SendingFile): Effect<State, Action> {
     val nextFile = state.remainingFiles.firstOrNull()
     return if (nextFile != null) {
-        effect(State.SendingFile(nextFile, 0, state.remainingFiles - nextFile), Action.SendFile(nextFile))
+        val nextState = State.SendingFile(nextFile, 0, state.remainingFiles - nextFile)
+        val action = Action.SendFile(nextFile)
+        effect(nextState, action)
     } else {
         effect(State.Completed)
     }

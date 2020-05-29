@@ -4,6 +4,7 @@ import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.schedulers.Schedulers
+import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import java.io.BufferedInputStream
 import java.io.FileInputStream
@@ -15,7 +16,7 @@ class BufferedFileReader(
     private val chunkBufferSize: Int = DEFAULT_BUFFER_SIZE,
     private val scheduler: Scheduler = Schedulers.io()
 ) : FileReader {
-    override fun readFile(path: String): Flowable<ByteArray> =
+    override fun readFile(path: String): Flowable<FileReader.Result> =
         Single
             .fromCallable { FileInputStream(path).iterableBuffered(readBufferSize, chunkBufferSize) }
             .flatMapPublisher { stream ->
@@ -25,6 +26,8 @@ class BufferedFileReader(
                     InputStream::close
                 ).filter { it.isNotEmpty() }
             }
+            .map<FileReader.Result> { FileReader.Result.Success(Bytes(it)) }
+            .onErrorReturn { FileReader.Result.Error(it) }
             .subscribeOn(scheduler)
 }
 

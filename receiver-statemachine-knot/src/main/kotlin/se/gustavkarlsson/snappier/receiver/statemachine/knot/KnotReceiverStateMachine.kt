@@ -152,7 +152,7 @@ private fun createReceiverKnot(
                 fileWriter.write(action.data.array)
                     .map { result ->
                         when (result) {
-                            FileWriter.Result.Success -> Change.FileDataWritten(action.data.array.size.toLong())
+                            FileWriter.Result.Success -> Change.FileDataWritten(action.data.size.toLong())
                             is FileWriter.Result.Error -> Change.Error(result.cause)
                         }
                     }

@@ -17,4 +17,6 @@ data class Bytes(val array: ByteArray) {
     }
 
     override fun toString(): String = "Bytes(size=${array.size})"
+
+    val size: Int get() = array.size
 }
