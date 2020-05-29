@@ -2,7 +2,7 @@ package se.gustavkarlsson.snappier.sender.statemachine.knot
 
 import de.halfbit.knot3.Effect
 import de.halfbit.knot3.knot
-import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.domain.FileRef
@@ -35,7 +35,7 @@ private sealed class Change {
     data class SendIntendedFiles(val files: Collection<FileRef>) : Change()
     data class AcceptedPathsReceived(val transferPaths: Collection<String>) : Change()
     data class FileDataSent(val sentBytes: Long) : Change()
-    object FileCompleted : Change()
+    object FileEnd : Change()
     data class ConnectionError(val cause: Throwable) : Change()
 }
 
@@ -97,7 +97,7 @@ private fun createSenderKnot(
                 }
                 is State.SendingFile -> when (change) {
                     is Change.FileDataSent -> fileDataSent(state, change)
-                    Change.FileCompleted -> fileCompleted(state)
+                    Change.FileEnd -> fileCompleted(state)
                     else -> unexpected(change)
                 }
                 State.Completed -> state.only
@@ -109,28 +109,60 @@ private fun createSenderKnot(
     actions {
         watchAll { logger.info { "Action: $it" } }
         perform<Action.SendHandshake> {
-            @Suppress("RemoveExplicitTypeArguments")
-            concatMap { connection.sendHandshake().toObservable<Change>() }
+            concatMapMaybe {
+                connection.sendHandshake()
+                    .flatMapMaybe { result ->
+                        when (result) {
+                            is SenderConnection.SendResult.Success -> Maybe.empty()
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                        }
+                    }
+            }
         }
         perform<Action.SendIntendedFiles> {
-            concatMap { action ->
-                @Suppress("RemoveExplicitTypeArguments")
-                connection.sendIntendedFiles(action.files).toObservable<Change>()
+            concatMapMaybe { action ->
+                connection.sendIntendedFiles(action.files)
+                    .flatMapMaybe { result ->
+                        when (result) {
+                            is SenderConnection.SendResult.Success -> Maybe.empty()
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                        }
+                    }
             }
         }
         perform<Action.SendFile> {
             concatMap { action ->
-                val sendFileStart = connection.sendFileStart(action.file.transferPath).toFlowable<Change>()
-                val sendData = fileReader.readFile(action.file.fileSystemPath)
-                    .concatMap { data ->
-                        connection.sendFileData(data).andThen(Flowable.just(Change.FileDataSent(data.size.toLong())))
+                val sendFileStart = connection.sendFileStart(action.file.transferPath)
+                    .flatMapMaybe { result ->
+                        when (result) {
+                            SenderConnection.SendResult.Success -> Maybe.empty<Change>()
+                            is SenderConnection.SendResult.Error -> Maybe.just(Change.ConnectionError(result.cause))
+                        }
                     }
-                val sendFileCompleted = connection.sendFileEnd().andThen(Flowable.just(Change.FileCompleted))
 
-                sendFileStart
-                    .concatWith(sendData)
-                    .concatWith(sendFileCompleted)
-                    .toObservable()
+                val sendData = fileReader.readFile(action.file.fileSystemPath)
+                    .flatMapSingle { data ->
+                        connection.sendFileData(data)
+                            .map { result ->
+                                when (result) {
+                                    SenderConnection.SendResult.Success -> Change.FileDataSent(data.size.toLong())
+                                    is SenderConnection.SendResult.Error -> Change.ConnectionError(result.cause)
+                                }
+                            }
+                    }
+
+                val sendFileEnd = connection.sendFileEnd()
+                    .map { result ->
+                        when (result) {
+                            SenderConnection.SendResult.Success -> Change.FileEnd
+                            is SenderConnection.SendResult.Error -> Change.ConnectionError(result.cause)
+                        }
+                    }
+
+                sendFileStart.toObservable()
+                    .concatWith(sendData.toObservable())
+                    .concatWith(sendFileEnd)
+                    .takeUntil { it is Change.ConnectionError }
             }
         }
     }
@@ -180,7 +212,7 @@ private fun fileCompleted(state: State.SendingFile): Effect<State, Action> {
 }
 
 private fun connectionError(change: Change.ConnectionError): Effect<State, Action> =
-    effect(State.Failed(change.cause.message?: change.cause.toString()))
+    effect(State.Failed(change.cause.message ?: change.cause.toString()))
 
 private fun effect(state: State, vararg actions: Action): Effect<State, Action> =
     when (actions.size) {
