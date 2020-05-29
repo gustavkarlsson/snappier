@@ -5,7 +5,7 @@ import io.reactivex.rxjava3.core.Single
 import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.message.TransferFile
 
-interface ReceiverConnection {
+interface ReceiverConnection : AutoCloseable {
     sealed class ReceivedEvent {
         data class Handshake(val protocolVersion: Int) : ReceivedEvent()
         data class IntendedFiles(val files: Collection<TransferFile>) : ReceivedEvent()

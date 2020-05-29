@@ -8,6 +8,7 @@ import mu.KotlinLogging
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val logger = KotlinLogging.logger {}
 
@@ -16,8 +17,18 @@ class DefaultReceiverConnection(
     private val outgoing: Observer<ReceiverMessage>,
     private val protocolVersion: Int
 ) : ReceiverConnection {
+
+    private val open = AtomicBoolean(true)
+
+    private fun checkOpen() {
+        check(open.get()) { "Connection is closed" }
+    }
+
+    override fun close() = open.set(false)
+
     override val incoming: Observable<ReceiverConnection.ReceivedEvent> =
         incoming
+            .doOnNext { checkOpen() }
             .doOnNext { logger.info { "Incoming message: $it" } }
             .map { message ->
                 when (message) {
@@ -31,13 +42,14 @@ class DefaultReceiverConnection(
             .onErrorReturn { ReceiverConnection.ReceivedEvent.Error(it) }
 
     override fun sendHandshake(): Single<ReceiverConnection.SendResult> =
-        actionWithErrorHandling { outgoing.onNext(ReceiverMessage.Handshake(protocolVersion)) }
+        send(ReceiverMessage.Handshake(protocolVersion))
 
     override fun sendAcceptedPaths(transferPaths: Collection<String>): Single<ReceiverConnection.SendResult> =
-        actionWithErrorHandling { outgoing.onNext(ReceiverMessage.AcceptedPaths(transferPaths)) }
-}
+        send(ReceiverMessage.AcceptedPaths(transferPaths))
 
-private fun actionWithErrorHandling(block: () -> Unit) =
-    Completable.fromAction(block)
-        .toSingleDefault<ReceiverConnection.SendResult>(ReceiverConnection.SendResult.Success)
-        .onErrorReturn { ReceiverConnection.SendResult.Error(it) }
+    private fun send(message: ReceiverMessage) =
+        Completable.fromAction(::checkOpen)
+            .andThen(Completable.fromAction { outgoing.onNext(message) })
+            .toSingleDefault<ReceiverConnection.SendResult>(ReceiverConnection.SendResult.Success)
+            .onErrorReturn { ReceiverConnection.SendResult.Error(it) }
+}
