@@ -1,21 +1,25 @@
 package se.gustavkarlsson.snappier.sender.statemachine.knot
 
+import dagger.Binds
+import dagger.Module
 import de.halfbit.knot3.Effect
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Single
 import mu.KotlinLogging
+import se.gustavkarlsson.snappier.common.config.ProtocolVersion
 import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import se.gustavkarlsson.snappier.sender.statemachine.SenderStateMachine
 import se.gustavkarlsson.snappier.sender.statemachine.State
+import javax.inject.Inject
 
 private val logger = KotlinLogging.logger {}
 
-class KnotSenderStateMachine(
-    protocolVersion: Int,
+internal class KnotSenderStateMachine @Inject constructor(
+    @ProtocolVersion protocolVersion: Int,
     connection: SenderConnection,
     fileReader: FileReader
 ) : SenderStateMachine {
@@ -28,6 +32,12 @@ class KnotSenderStateMachine(
 
     override fun sendIntendedFiles(files: Collection<FileRef>) =
         knot.change.accept(Change.SendIntendedFiles(files))
+
+    @Module
+    abstract class Binding {
+        @Binds
+        abstract fun bind(implementation: KnotSenderStateMachine): SenderStateMachine
+    }
 }
 
 private sealed class Change {

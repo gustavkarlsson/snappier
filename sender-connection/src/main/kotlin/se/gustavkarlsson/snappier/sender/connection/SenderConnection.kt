@@ -4,7 +4,7 @@ import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Single
 import se.gustavkarlsson.snappier.common.domain.FileRef
 
-interface SenderConnection: AutoCloseable {
+interface SenderConnection : AutoCloseable {
     sealed class ReceivedEvent {
         data class Handshake(val protocolVersion: Int) : ReceivedEvent()
         data class AcceptedPaths(val transferPaths: Collection<String>) : ReceivedEvent()

@@ -3,18 +3,21 @@ package se.gustavkarlsson.snappier.sender.files.buffered
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
-import io.reactivex.rxjava3.schedulers.Schedulers
+import se.gustavkarlsson.snappier.common.config.FileBufferSize
+import se.gustavkarlsson.snappier.common.config.IoScheduler
+import se.gustavkarlsson.snappier.common.config.NetworkBufferSize
 import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.sender.files.FileReader
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import javax.inject.Inject
 import kotlin.collections.Iterator as KotlinIterator
 
-class BufferedFileReader(
-    private val readBufferSize: Int = DEFAULT_BUFFER_SIZE,
-    private val chunkBufferSize: Int = DEFAULT_BUFFER_SIZE,
-    private val scheduler: Scheduler = Schedulers.io()
+internal class BufferedFileReader @Inject constructor(
+    @FileBufferSize private val readBufferSize: Int,
+    @NetworkBufferSize val chunkBufferSize: Int,
+    @IoScheduler val scheduler: Scheduler
 ) : FileReader {
     override fun readFile(path: String): Flowable<FileReader.Result> =
         Single
@@ -56,7 +59,6 @@ private class IterableBufferedInputStream(
                 else -> buffer
             }
         }
-
     }
 }
 

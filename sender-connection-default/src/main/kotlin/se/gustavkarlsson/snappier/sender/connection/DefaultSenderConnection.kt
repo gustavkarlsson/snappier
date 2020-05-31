@@ -1,24 +1,27 @@
-package se.gustavkarlsson.snappier.sender.connection.default
+package se.gustavkarlsson.snappier.sender.connection
 
+import dagger.Binds
+import dagger.Module
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Observer
 import io.reactivex.rxjava3.core.Single
 import mu.KotlinLogging
+import se.gustavkarlsson.snappier.common.config.ProtocolVersion
 import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
 import se.gustavkarlsson.snappier.common.message.TransferFile
-import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.inject.Inject
 
 private val logger = KotlinLogging.logger {}
 
-class DefaultSenderConnection(
+internal class DefaultSenderConnection @Inject constructor(
     incoming: Observable<ReceiverMessage>,
     private val outgoing: Observer<SenderMessage>,
-    private val protocolVersion: Int
+    @ProtocolVersion private val protocolVersion: Int
 ) : SenderConnection {
 
     private val open = AtomicBoolean(true)
@@ -59,6 +62,12 @@ class DefaultSenderConnection(
             .andThen(Completable.fromAction { outgoing.onNext(message) })
             .toSingleDefault<SenderConnection.SendResult>(SenderConnection.SendResult.Success)
             .onErrorReturn { SenderConnection.SendResult.Error(it) }
+
+    @Module
+    abstract class Binding {
+        @Binds
+        abstract fun bind(implementation: DefaultSenderConnection): SenderConnection
+    }
 }
 
 private fun FileRef.toTransferFile() = TransferFile(transferPath, size)
