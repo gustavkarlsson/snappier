@@ -1,10 +1,13 @@
 package se.gustavkarlsson.snappier.receiver.statemachine.knot
 
+import dagger.Binds
+import dagger.Module
 import de.halfbit.knot3.Effect
 import de.halfbit.knot3.knot
 import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.core.Observable
 import mu.KotlinLogging
+import se.gustavkarlsson.snappier.common.config.ProtocolVersion
 import se.gustavkarlsson.snappier.common.domain.Bytes
 import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.common.message.TransferFile
@@ -12,11 +15,12 @@ import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnection
 import se.gustavkarlsson.snappier.receiver.files.FileWriter
 import se.gustavkarlsson.snappier.receiver.statemachine.ReceiverStateMachine
 import se.gustavkarlsson.snappier.receiver.statemachine.State
+import javax.inject.Inject
 
 private val logger = KotlinLogging.logger {}
 
-class KnotReceiverStateMachine(
-    protocolVersion: Int,
+internal class KnotReceiverStateMachine @Inject constructor(
+    @ProtocolVersion protocolVersion: Int,
     connection: ReceiverConnection,
     fileWriter: FileWriter
 ) : ReceiverStateMachine {
@@ -27,6 +31,12 @@ class KnotReceiverStateMachine(
 
     override fun setAcceptedPaths(receivePath: String, acceptedPaths: Collection<String>) =
         knot.change.accept(Change.SendAcceptedPaths(receivePath, acceptedPaths))
+
+    @Module
+    abstract class Binding {
+        @Binds
+        abstract fun bind(implementation: KnotReceiverStateMachine): ReceiverStateMachine
+    }
 }
 
 private sealed class Change {

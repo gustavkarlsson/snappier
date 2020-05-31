@@ -5,11 +5,10 @@ import io.reactivex.rxjava3.subjects.PublishSubject
 import se.gustavkarlsson.snappier.common.domain.FileRef
 import se.gustavkarlsson.snappier.common.message.ReceiverMessage
 import se.gustavkarlsson.snappier.common.message.SenderMessage
-import se.gustavkarlsson.snappier.receiver.connection.default.DefaultReceiverConnection
-import se.gustavkarlsson.snappier.receiver.files.default.DefaultFileWriter
+import se.gustavkarlsson.snappier.receiver.connection.ReceiverConnectionModule
+import se.gustavkarlsson.snappier.receiver.connection.ReceiverMessageStreamsModule
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufReceiverMessageSerializer
 import se.gustavkarlsson.snappier.receiver.serialization.protobuf.ProtobufSenderMessageDeserializer
-import se.gustavkarlsson.snappier.receiver.statemachine.knot.KnotReceiverStateMachine
 import se.gustavkarlsson.snappier.sender.connection.SenderConnection
 import se.gustavkarlsson.snappier.sender.connection.SenderConnectionModule
 import se.gustavkarlsson.snappier.sender.connection.SenderMessageStreamsModule
@@ -17,12 +16,8 @@ import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufReceiver
 import se.gustavkarlsson.snappier.sender.serialization.protobuf.ProtobufSenderMessageSerializer
 import java.io.File
 
-private const val PROTOCOL_VERSION = 1
-private const val FILE_BUFFER_SIZE = 8192
-
 internal fun main() {
-    val appComponent = DaggerAppComponent
-        .create()
+    val appComponent = DaggerAppComponent.create()
 
     val senderToReceiverMessages = PublishSubject.create<SenderMessage>()
     val receiverToSenderMessages = PublishSubject.create<ReceiverMessage>()
@@ -39,23 +34,15 @@ internal fun main() {
 
     val outgoingReceiverMessages: Observer<ReceiverMessage> = receiverToSenderMessages
 
-    val receiverConnection = DefaultReceiverConnection(
-        incomingReceiverMessages,
-        outgoingReceiverMessages,
-        PROTOCOL_VERSION
-    )
-
-    val fileWriter = DefaultFileWriter(FILE_BUFFER_SIZE)
-
     val senderConnection: SenderConnection = appComponent.createDefaultSenderConnectionSubcomponentBuilder()
-        .messageStreamsModule(
-            SenderMessageStreamsModule(
-                incomingSenderMessages,
-                outgoingSenderMessages
-            )
-        )
+        .messageStreamsModule(SenderMessageStreamsModule(incomingSenderMessages, outgoingSenderMessages))
         .build()
         .senderConnection()
+
+    val receiverConnection = appComponent.createDefaultReceiverConnectionSubcomponentBuilder()
+        .messageStreamsModule(ReceiverMessageStreamsModule(incomingReceiverMessages, outgoingReceiverMessages))
+        .build()
+        .receiverConnection()
 
     val senderStateMachine = appComponent.createKnotSenderStateMachineSubcomponentBuilder()
         .senderConnectionModule(SenderConnectionModule(senderConnection))
@@ -63,7 +50,10 @@ internal fun main() {
         .senderStateMachine()
         .apply { state.subscribe() }
 
-    val receiverStateMachine = KnotReceiverStateMachine(PROTOCOL_VERSION, receiverConnection, fileWriter)
+    val receiverStateMachine = appComponent.createKnotReceiverStateMachineSubcomponentBuilder()
+        .receiverConnectionModule(ReceiverConnectionModule(receiverConnection))
+        .build()
+        .receiverStateMachine()
         .apply { state.subscribe() }
 
     senderStateMachine.sendHandshake()

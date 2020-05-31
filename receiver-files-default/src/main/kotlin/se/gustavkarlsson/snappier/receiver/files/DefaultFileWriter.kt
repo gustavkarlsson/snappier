@@ -1,17 +1,16 @@
-package se.gustavkarlsson.snappier.receiver.files.default
+package se.gustavkarlsson.snappier.receiver.files
 
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Scheduler
 import io.reactivex.rxjava3.core.Single
-import io.reactivex.rxjava3.schedulers.Schedulers
-import se.gustavkarlsson.snappier.receiver.files.FileWriter
+import se.gustavkarlsson.snappier.common.config.FileBufferSize
 import java.io.BufferedOutputStream
 import java.io.File
-import java.util.concurrent.Executors
+import javax.inject.Inject
 
-class DefaultFileWriter(
-    private val writeBufferSize: Int = DEFAULT_BUFFER_SIZE,
-    private val scheduler: Scheduler = Schedulers.from(Executors.newSingleThreadExecutor())
+internal class DefaultFileWriter @Inject constructor(
+    @FileBufferSize private val writeBufferSize: Int,
+    @DefaultFileWriterScheduler private val scheduler: Scheduler
 ) : FileWriter {
     private var currentStream: BufferedOutputStream? = null
 
