@@ -4,14 +4,12 @@ import dagger.Subcomponent
 
 @Subcomponent(
     modules = [
-        DefaultReceiverConnection.Binding::class,
-        ReceiverMessageStreamsModule::class
+        DefaultReceiverConnection.Binding::class
     ]
 )
 interface DefaultReceiverConnectionSubcomponent {
     @Subcomponent.Builder
     interface Builder {
-        fun messageStreamsModule(receiverMessageStreamsModule: ReceiverMessageStreamsModule): Builder
         fun build(): DefaultReceiverConnectionSubcomponent
     }
 

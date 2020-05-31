@@ -14,7 +14,8 @@ import javax.inject.Singleton
     modules = [
         ConfigModule::class,
         BufferedFileReaderModule::class,
-        DefaultFileWriterModule::class
+        DefaultFileWriterModule::class,
+        MessageStreamsModule::class
     ]
 )
 internal interface AppComponent {
